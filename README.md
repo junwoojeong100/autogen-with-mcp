@@ -39,18 +39,55 @@ async def get_alerts(state: str) -> str:
     return "..."
 ```
 
-3. 서버 실행
-FastMCP는 일반적으로 main 함수에서 실행합니다.
+
+3. 서버 실행 및 옵션 안내
+FastMCP는 main 함수에서 실행하며, 다양한 transport 옵션을 지원합니다.
+
+#### 주요 실행 옵션
+- `transport="stdio"` : 기본값. 로컬 subprocess/stdin-stdout 기반 통신(빠르고 간단, 보안 필요 없음)
+- `transport="sse"` : HTTP 기반 SSE(Server-Sent Events) 통신(네트워크 접근, 여러 클라이언트 지원)
+- `transport="streamable-http"` : 고급 HTTP 스트리밍(대규모/고성능/멀티세션 환경)
+- `mount_path` : SSE/HTTP 모드에서 엔드포인트 경로 지정(기본값: `/sse`)
+
+#### 예시: stdio(로컬)
 ```python
 if __name__ == "__main__":
-    mcp.serve()
+    mcp.run(transport="stdio")  # 또는 mcp.serve()와 동일
 ```
+
+#### 예시: SSE(HTTP)
+```python
+if __name__ == "__main__":
+    mcp.run(transport="sse")  # http://localhost:8000/sse
+```
+
+#### 예시: Streamable HTTP
+```python
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")  # http://localhost:8000/mcp
+```
+
+#### 예시: SSE 커스텀 엔드포인트
+```python
+if __name__ == "__main__":
+    mcp.run(transport="sse", mount_path="/custom-sse")
+```
+
+> **실행 옵션 요약**
+> - 로컬 개발/테스트: `stdio` 권장
+> - 네트워크/여러 클라이언트: `sse` 또는 `streamable-http` 권장
+> - 고성능/멀티세션/대규모: `streamable-http` 권장
+
+각 transport에 따라 클라이언트 연결 방식도 달라지니, 아래 클라이언트 가이드도 참고하세요.
 
 ---
 
+
 ## autogen에서 MCP 서버 코드 호출 가이드
 
-`autogen_ext`의 `McpWorkbench`와 `StdioServerParams`를 사용하여 MCP 서버를 프로세스로 실행하고, 도구를 자동으로 인식할 수 있습니다.
+### 1. Local(로컬 stdio) 방식
+
+`autogen_ext`의 `McpWorkbench`와 `StdioServerParams`를 사용하여 MCP 서버를 subprocess로 실행하고, 도구를 자동으로 인식할 수 있습니다.
 
 예시:
 ```python
@@ -68,10 +105,52 @@ async with McpWorkbench(server_params=params) as workbench:
     # 이후 AssistantAgent 등에서 workbench를 연결해 사용
 ```
 
-### 전체 예제 흐름
+#### 전체 예제 흐름 (Local)
 1. MCP 서버 코드(`weather.py`) 작성 및 도구 등록
 2. autogen 클라이언트 코드(`mcp_client.py`)에서 MCP 서버를 subprocess로 실행
 3. `McpWorkbench`를 통해 도구 목록을 확인하고, AssistantAgent 등에서 활용
 
----
 자세한 예제는 `weather.py`, `mcp_client.py` 파일을 참고하세요.
+
+---
+
+### 2. SSE 방식 (원격/로컬 HTTP)
+
+MCP 서버를 SSE(HTTP)로 실행하면 네트워크를 통해 클라이언트가 접속할 수 있습니다. 이때는 `SseServerParams`와 `SseMcpToolAdapter`를 사용합니다.
+
+#### 서버 실행 예시 (`weather_sse.py`)
+```python
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("weather")
+
+@mcp.tool()
+async def get_alerts(state: str) -> str:
+    ...
+
+@mcp.tool()
+async def get_forecast(latitude: float, longitude: float) -> str:
+    ...
+
+if __name__ == "__main__":
+    mcp.run(transport="sse")
+```
+
+#### 클라이언트 예시 (`mcp_client_sse.py`)
+```python
+from autogen_ext.tools.mcp import SseMcpToolAdapter, SseServerParams
+
+server_params = SseServerParams(url="http://localhost:8000/sse")
+adapter1 = await SseMcpToolAdapter.from_server_params(server_params, "get_alerts")
+adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_forecast")
+
+# 이후 AssistantAgent 등에서 adapter1, adapter2를 tools로 사용
+```
+
+#### 전체 예제 흐름 (SSE)
+1. MCP 서버 코드(`weather_sse.py`) 작성 및 도구 등록
+2. MCP 서버를 HTTP SSE 모드로 실행: `python weather_sse.py`
+3. autogen 클라이언트 코드(`mcp_client_sse.py`)에서 SseServerParams로 서버에 접속
+4. SseMcpToolAdapter로 도구를 가져와 AssistantAgent 등에서 활용
+
+자세한 예제는 `weather_sse.py`, `mcp_client_sse.py` 파일을 참고하세요.
