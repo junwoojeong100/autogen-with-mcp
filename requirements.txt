@@ -1,7 +1,6 @@
 autogen-agentchat
-autogen-ext[openai,azure]
+autogen-ext[openai,azure,mcp]
 openai
 python-dotenv
-azure-identity
 httpx
 mcp[cli]
