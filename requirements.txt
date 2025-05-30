@@ -1,0 +1,7 @@
+autogen-agentchat
+autogen-ext[openai,azure]
+openai
+python-dotenv
+azure-identity
+httpx
+mcp[cli]
