@@ -1,5 +1,25 @@
 
+
 # autogen-with-mcp
+
+
+## Python 3.12 가상환경 생성 및 패키지 설치 가이드
+
+> ⚠️ **MCP 서버를 실행하려면 Python 3.10 이상이 필요합니다.**
+> 이번 실습에서는 Python 3.12 환경에서 아래 과정을 진행하세요.
+
+1. Python 3.12로 가상환경 생성
+```sh
+python3.12 -m venv myenv
+source myenv/bin/activate
+```
+
+2. requirements.txt의 패키지 설치
+```sh
+pip3 install -r requirements.txt
+```
+
+---
 
 ## MCP 서버 코드 작성 가이드
 
