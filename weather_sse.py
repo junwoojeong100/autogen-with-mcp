@@ -65,6 +65,6 @@ async def get_forecast(latitude: float, longitude: float) -> str:
     return "\n".join(forecast)
 
 
-# MCP 서버 실행
+# MCP 서버 실행 (SSE 타입)
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    mcp.run(transport="sse") 

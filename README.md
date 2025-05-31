@@ -41,42 +41,32 @@ async def get_alerts(state: str) -> str:
 
 
 3. 서버 실행 및 옵션 안내
-FastMCP는 main 함수에서 실행하며, 다양한 transport 옵션을 지원합니다.
+FastMCP는 main 함수에서 실행하며, transport 옵션은 총 3가지를 공식적으로 지원합니다.
 
-#### 주요 실행 옵션
-- `transport="stdio"` : 기본값. 로컬 subprocess/stdin-stdout 기반 통신(빠르고 간단, 보안 필요 없음)
-- `transport="sse"` : HTTP 기반 SSE(Server-Sent Events) 통신(네트워크 접근, 여러 클라이언트 지원)
-- `transport="streamable-http"` : 고급 HTTP 스트리밍(대규모/고성능/멀티세션 환경)
-- `mount_path` : SSE/HTTP 모드에서 엔드포인트 경로 지정(기본값: `/sse`)
+#### 지원하는 transport 옵션 (공식 문서 기준)
+- `transport="stdio"` : 로컬 subprocess/stdin-stdout 기반 통신 (기본값, 빠르고 간단, 보안 필요 없음)
+- `transport="sse"` : HTTP 기반 SSE(Server-Sent Events) 통신 (네트워크 접근, 여러 클라이언트 지원)
+- `mount_path` : SSE/HTTP 모드에서 엔드포인트 경로 지정 (SSE에서만 사용, 기본값: `/sse`)
+
 
 #### 예시: stdio(로컬)
 ```python
 if __name__ == "__main__":
-    mcp.run(transport="stdio")  # 또는 mcp.serve()와 동일
+    mcp.run(transport="stdio")  # 공식 기본값, 로컬 subprocess/stdin-stdout
+    # mcp.serve()와 동일하게 동작합니다.
 ```
 
 #### 예시: SSE(HTTP)
 ```python
 if __name__ == "__main__":
-    mcp.run(transport="sse")  # http://localhost:8000/sse
-```
-
-#### 예시: Streamable HTTP
-```python
-if __name__ == "__main__":
-    mcp.run(transport="streamable-http")  # http://localhost:8000/mcp
-```
-
-#### 예시: SSE 커스텀 엔드포인트
-```python
-if __name__ == "__main__":
-    mcp.run(transport="sse", mount_path="/custom-sse")
+    mcp.run(transport="sse")  # http://localhost:8000/sse (기본 엔드포인트)
 ```
 
 > **실행 옵션 요약**
 > - 로컬 개발/테스트: `stdio` 권장
-> - 네트워크/여러 클라이언트: `sse` 또는 `streamable-http` 권장
-> - 고성능/멀티세션/대규모: `streamable-http` 권장
+> - 네트워크/여러 클라이언트: `sse` 권장
+
+공식 문서 참고: [MCP Transports Guide](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) 및 [Python SDK FastMCP Server](https://modelcontextprotocol.io/python-sdk/fastmcp/#server-transport-options)
 
 각 transport에 따라 클라이언트 연결 방식도 달라지니, 아래 클라이언트 가이드도 참고하세요.
 
@@ -133,7 +123,7 @@ async def get_forecast(latitude: float, longitude: float) -> str:
     ...
 
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    mcp.run(transport="sse")  # 또는 "stdio", "streamable-http" 등 공식 옵션만 사용
 ```
 
 #### 클라이언트 예시 (`mcp_client_sse.py`)
