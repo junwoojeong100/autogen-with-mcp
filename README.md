@@ -10,8 +10,8 @@
 
 1. Python 3.12로 가상환경 생성
 ```sh
-python3.12 -m venv myenv
-source myenv/bin/activate
+python3.12 -m venv .venv
+source .venv/bin/activate
 ```
 
 2. requirements.txt의 패키지 설치
