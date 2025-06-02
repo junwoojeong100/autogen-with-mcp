@@ -41,7 +41,7 @@ async def get_alerts(state: str) -> str:
 
 
 3. 서버 실행 및 옵션 안내
-FastMCP는 main 함수에서 실행하며, transport 옵션은 총 3가지를 공식적으로 지원합니다.
+FastMCP는 main 함수에서 실행하며, 2가지의 transport 옵션을 지원합니다.
 
 #### 지원하는 transport 옵션 (공식 문서 기준)
 - `transport="stdio"` : 로컬 subprocess/stdin-stdout 기반 통신 (기본값, 빠르고 간단, 보안 필요 없음)
