@@ -151,6 +151,19 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 ---
 
 
+### 다른 개발자가 만든 MCP 서버 사용하기
+VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐만 아니라, 다른 개발자가 만든 MCP 서버(예: 원격 서버, 공개된 MCP 엔드포인트 등)도 쉽게 연결하여 사용할 수 있습니다.
+
+1. **서버 엔드포인트 정보 확인:**
+   - 사용할 MCP 서버의 URL(예: `https://example.com/sse`) 또는 접속 정보를 확인합니다.
+   - 다양한 공개 MCP 서버 엔드포인트는 [smithery.ai](https://smithery.ai/)에서 탐색하거나 확인할 수 있습니다.
+2. **클라이언트 설정:**
+   - Autogen, Copilot 등에서 해당 서버의 엔드포인트를 지정하여 연결할 수 있습니다.
+   - 예시: `SseServerParams(url="https://example.com/sse")`와 같이 사용
+3. **도구 목록 불러오기 및 활용:**
+   - 연결된 MCP 서버의 도구 목록을 불러와서, 자신의 프로젝트나 VS Code 내에서 바로 활용할 수 있습니다.
+
+
 ## VS Code에서 Azure MCP Server 사용 가이드 (Microsoft Learn 기반)
 
 - Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
