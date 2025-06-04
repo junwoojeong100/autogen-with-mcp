@@ -168,6 +168,5 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
 
 - Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
 - 빠른 시작: [Azure MCP Server Get Started](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/get-started?tabs=one-click%2Cazure-cli&pivots=mcp-github-copilot)
-- Python 환경 준비, 가상환경 생성, 의존성 설치, 서버 실행, Azure 배포 등 단계별 안내 포함
 
 최신 정보와 상세 단계는 반드시 위 공식 문서를 참고하세요.
