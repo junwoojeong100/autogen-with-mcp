@@ -5,7 +5,9 @@
 
 ## Python 3.12 가상환경 생성 및 패키지 설치 가이드
 
-> ⚠️ **AutoGen에서 MCP 서버를 실행하려면 Python 3.10 이상이 필요합니다.**
+
+> ⚠️ **MCP 서버를 실행하려면 Python 3.11 이상이 필요합니다.**  
+> (출처: [Python SDK FastMCP Server 공식 문서](https://modelcontextprotocol.io/python-sdk/fastmcp/#server-transport-options))
 > 이번 실습에서는 Python 3.12 환경에서 아래 과정을 진행합니다.
 
 1. Python 3.12로 가상환경 생성
@@ -143,4 +145,18 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 3. autogen 클라이언트 코드(`mcp_client_sse.py`)에서 SseServerParams로 서버에 접속
 4. SseMcpToolAdapter로 도구를 가져와 AssistantAgent 등에서 활용
 
+
 자세한 예제는 `weather_sse.py`, `mcp_client_sse.py` 파일을 참고하세요.
+
+---
+
+
+## VS Code에서 Azure MCP Server 사용 가이드 (Microsoft Learn 기반)
+
+VS Code 환경에서 Azure MCP Server를 개발·실행하는 방법은 [`vscode-mcp-guide.md`](./vscode-mcp-guide.md) 문서를 참고하세요.
+
+- Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
+- 빠른 시작: [Azure MCP Server Get Started](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/get-started?tabs=one-click%2Cazure-cli&pivots=mcp-github-copilot)
+- Python 환경 준비, 가상환경 생성, 의존성 설치, 서버 실행, Azure 배포 등 단계별 안내 포함
+
+최신 정보와 상세 단계는 반드시 위 공식 문서를 참고하세요.
