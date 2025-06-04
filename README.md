@@ -75,7 +75,7 @@ if __name__ == "__main__":
 ---
 
 
-## autogen에서 MCP 서버 코드 호출 가이드
+## AutoGen에서 MCP 서버 코드 호출 가이드
 
 ### 1. Local(로컬 stdio) 방식
 
@@ -152,8 +152,6 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 
 
 ## VS Code에서 Azure MCP Server 사용 가이드 (Microsoft Learn 기반)
-
-VS Code 환경에서 Azure MCP Server를 개발·실행하는 방법은 [`vscode-mcp-guide.md`](./vscode-mcp-guide.md) 문서를 참고하세요.
 
 - Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
 - 빠른 시작: [Azure MCP Server Get Started](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/get-started?tabs=one-click%2Cazure-cli&pivots=mcp-github-copilot)
