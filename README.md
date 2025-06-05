@@ -53,7 +53,6 @@ FastMCP는 main 함수에서 실행하며, 다양한 transport 옵션을 지원�
 ```python
 if __name__ == "__main__":
     mcp.run(transport="stdio")  # 공식 기본값, 로컬 subprocess/stdin-stdout
-    # mcp.serve()와 동일하게 동작합니다.
 ```
 
 #### 예시: SSE(HTTP)
