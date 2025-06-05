@@ -25,16 +25,16 @@ pip3 install -r requirements.txt
 3. Azure AI Foundry(AOAI) 모델 배포 및 환경 변수 설정
    - Azure AI Foundry(예: Azure OpenAI Studio)에서 GPT-4.1 mini 등 원하는 모델을 배포합니다.
    - 배포 후, 아래 정보를 확인하여 `.env` 파일에 추가해야 합니다:
-     - AOAI_ENDPOINT: Azure OpenAI Endpoint URL (예: https://xxxx.openai.azure.com/)
-     - AOAI_API_KEY: Azure OpenAI API Key
-     - AOAI_API_VERSION: API Version (예: 2024-12-01-preview)
-     - AOAI_DEPLOYMENT_NAME: 배포한 모델의 Deployment Name
+     - AZURE_OPENAI_ENDPOINT: Azure OpenAI Endpoint URL (예: https://xxxx.openai.azure.com/)
+     - AZURE_OPENAI_API_KEY: Azure OpenAI API Key
+     - AZURE_OPENAI_API_VERSION: API Version (예: 2024-12-01-preview)
+     - AZURE_OPENAI_DEPLOYMENT_NAME: 배포한 모델의 Deployment Name
    - 예시:
      ```env
      AOAI_ENDPOINT=https://xxxx.openai.azure.com/
-     AOAI_API_KEY=your-azure-openai-key
-     AOAI_API_VERSION=2024-12-01-preview
-     AOAI_DEPLOYMENT_NAME=gpt-4-1-mini
+     AZURE_OPENAI_API_KEY=your-azure-openai-key
+     AZURE_OPENAI_API_VERSION=2024-12-01-preview
+     AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4-1-mini
      ```
    - 자세한 배포 및 환경 변수 설정 방법은 Azure OpenAI Studio(Foundry) 공식 문서를 참고하세요.
 
