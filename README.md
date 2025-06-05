@@ -31,7 +31,7 @@ pip3 install -r requirements.txt
      - AZURE_OPENAI_DEPLOYMENT_NAME: 배포한 모델의 Deployment Name
    - 예시:
      ```env
-     AOAI_ENDPOINT=https://xxxx.openai.azure.com/
+     AZURE_OPENAI_ENDPOINT=https://xxxx.openai.azure.com/
      AZURE_OPENAI_API_KEY=your-azure-openai-key
      AZURE_OPENAI_API_VERSION=2024-12-01-preview
      AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4-1-mini
