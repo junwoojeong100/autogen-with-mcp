@@ -16,10 +16,27 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
+
 2. requirements.txt의 패키지 설치
 ```sh
 pip3 install -r requirements.txt
 ```
+
+3. Azure AI Foundry(AOAI) 모델 배포 및 환경 변수 설정
+   - Azure AI Foundry(예: Azure OpenAI Studio)에서 GPT-4.1 mini 등 원하는 모델을 배포합니다.
+   - 배포 후, 아래 정보를 확인하여 `.env` 파일에 추가해야 합니다:
+     - AOAI_ENDPOINT: Azure OpenAI Endpoint URL (예: https://xxxx.openai.azure.com/)
+     - AOAI_API_KEY: Azure OpenAI API Key
+     - AOAI_API_VERSION: API Version (예: 2024-12-01-preview)
+     - AOAI_DEPLOYMENT_NAME: 배포한 모델의 Deployment Name
+   - 예시:
+     ```env
+     AOAI_ENDPOINT=https://xxxx.openai.azure.com/
+     AOAI_API_KEY=your-azure-openai-key
+     AOAI_API_VERSION=2024-12-01-preview
+     AOAI_DEPLOYMENT_NAME=gpt-4-1-mini
+     ```
+   - 자세한 배포 및 환경 변수 설정 방법은 Azure OpenAI Studio(Foundry) 공식 문서를 참고하세요.
 
 ---
 
@@ -180,9 +197,11 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
    - 연결된 MCP 서버의 도구 목록을 불러와서, 자신의 프로젝트나 VS Code 내에서 바로 활용할 수 있습니다.
 
 
+
 ### VS Code에서 Azure MCP Server 사용 가이드 (Microsoft Learn 기반)
 
 - Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
 - 빠른 시작: [Azure MCP Server Get Started](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/get-started?tabs=one-click%2Cazure-cli&pivots=mcp-github-copilot)
+- `.vscode` 디렉토리에 `mcp.json` 설정 파일을 통해, VS Code에서 Azure MCP 서버에 대한 클라이언트 설정을 할 수 있습니다.
 
 최신 정보와 상세 단계는 반드시 위 공식 문서를 참고하세요.
