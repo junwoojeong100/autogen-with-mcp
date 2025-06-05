@@ -41,15 +41,13 @@ async def get_alerts(state: str) -> str:
     return "..."
 ```
 
-
 3. 서버 실행 및 옵션 안내
-FastMCP는 main 함수에서 실행하며, 2가지의 transport 옵션을 지원합니다.
+FastMCP는 main 함수에서 실행하며, 다양한 transport 옵션을 지원합니다.
 
-#### 지원하는 transport 옵션 (공식 문서 기준)
+#### 지원하는 transport 옵션 (MCP 공식 문서 기준)
 - `transport="stdio"` : 로컬 subprocess/stdin-stdout 기반 통신 (기본값, 빠르고 간단, 보안 필요 없음)
 - `transport="sse"` : HTTP 기반 SSE(Server-Sent Events) 통신 (네트워크 접근, 여러 클라이언트 지원)
-- `mount_path` : SSE/HTTP 모드에서 엔드포인트 경로 지정 (SSE에서만 사용, 기본값: `/sse`)
-
+- `transport="streamable-http"` : HTTP 기반의 표준 REST API + 스트리밍 응답 지원 (AutoGen에서는 현재 지원하지 않음)
 
 #### 예시: stdio(로컬)
 ```python
@@ -67,6 +65,7 @@ if __name__ == "__main__":
 > **실행 옵션 요약**
 > - 로컬 개발/테스트: `stdio` 권장
 > - 네트워크/여러 클라이언트: `sse` 권장
+> - 클라이언트/REST API/스트리밍: `streamable-http` 권장
 
 공식 문서 참고: [MCP Transports Guide](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) 및 [Python SDK FastMCP Server](https://modelcontextprotocol.io/python-sdk/fastmcp/#server-transport-options)
 
@@ -97,10 +96,16 @@ async with McpWorkbench(server_params=params) as workbench:
     # 이후 AssistantAgent 등에서 workbench를 연결해 사용
 ```
 
-#### 전체 예제 흐름 (Local)
+#### 전체 예제 흐름 (stdio)
 1. MCP 서버 코드(`weather.py`) 작성 및 도구 등록
 2. autogen 클라이언트 코드(`mcp_client.py`)에서 MCP 서버를 subprocess로 실행
 3. `McpWorkbench`를 통해 도구 목록을 확인하고, AssistantAgent 등에서 활용
+
+#### 실행 방법 (stdio)
+   - 클라이언트 실행 (macOS/Linux에서는 python3 권장):
+     ```sh
+     python3 mcp_client.py
+     ```
 
 자세한 예제는 `weather.py`, `mcp_client.py` 파일을 참고하세요.
 
@@ -145,21 +150,33 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 3. autogen 클라이언트 코드(`mcp_client_sse.py`)에서 SseServerParams로 서버에 접속
 4. SseMcpToolAdapter로 도구를 가져와 AssistantAgent 등에서 활용
 
+#### 실행 방법 (SSE)
+   - 서버 실행 (macOS/Linux에서는 python3 권장):
+     ```sh
+     python3 weather_sse.py
+     ```
+   - 클라이언트 실행 (macOS/Linux에서는 python3 권장):
+     ```sh
+     python3 mcp_client_sse.py
+     ```
 
 자세한 예제는 `weather_sse.py`, `mcp_client_sse.py` 파일을 참고하세요.
 
 ---
 
 
-## 다른 개발자가 만든 MCP 서버 사용하기
+## 공개된 MCP 서버 사용하기
 VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐만 아니라, 다른 개발자가 만든 MCP 서버(예: 원격 서버, 공개된 MCP 엔드포인트 등)도 쉽게 연결하여 사용할 수 있습니다.
+
 
 1. **서버 엔드포인트 정보 확인:**
    - 사용할 MCP 서버의 URL(예: `https://example.com/sse`) 또는 접속 정보를 확인합니다.
    - 다양한 공개 MCP 서버 엔드포인트는 [smithery.ai](https://smithery.ai/)에서 탐색하거나 확인할 수 있습니다.
+
 2. **클라이언트 설정:**
-   - Autogen, Copilot 등에서 해당 서버의 엔드포인트를 지정하여 연결할 수 있습니다.
+   - Autogen, VS Code 등에서 해당 서버의 엔드포인트를 지정하여 연결할 수 있습니다.
    - 예시: `SseServerParams(url="https://example.com/sse")`와 같이 사용
+
 3. **도구 목록 불러오기 및 활용:**
    - 연결된 MCP 서버의 도구 목록을 불러와서, 자신의 프로젝트나 VS Code 내에서 바로 활용할 수 있습니다.
 
