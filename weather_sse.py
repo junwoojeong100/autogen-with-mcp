@@ -1,13 +1,15 @@
-
 # MCP 기반 서버로 리팩토링
 from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
+import json
+import asyncio
+
+# FastMCP 인스턴스 생성
+mcp = FastMCP("weather-mcp-server")
 
 NWS_API_BASE = "https://api.weather.gov"
 USER_AGENT = "weather-app/1.0"
-
-mcp = FastMCP("weather")
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
     headers = {
@@ -67,4 +69,8 @@ async def get_forecast(latitude: float, longitude: float) -> str:
 
 # MCP 서버 실행 (SSE 타입)
 if __name__ == "__main__":
-    mcp.run(transport="sse") 
+    print(f"Starting MCP server on localhost:8000")
+    print(f"Available at: http://localhost:8000/sse")
+    
+    # FastMCP 서버를 SSE 모드로 실행 (기본 설정 사용)
+    mcp.run(transport="sse")

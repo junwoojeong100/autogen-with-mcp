@@ -1,4 +1,4 @@
-from autogen_ext.tools.mcp import SseMcpToolAdapter, SseServerParams, mcp_server_tools
+from autogen_ext.tools.mcp import SseMcpToolAdapter, SseServerParams
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.ui import Console

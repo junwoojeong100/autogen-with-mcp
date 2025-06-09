@@ -1,7 +1,5 @@
 
-
 # autogen-with-mcp
-
 
 ## Python 3.12 가상환경 생성 및 패키지 설치 가이드
 
@@ -88,7 +86,6 @@ if __name__ == "__main__":
 각 transport에 따라 클라이언트 연결 방식도 달라지니, 아래 클라이언트 가이드도 참고하세요.
 
 ---
-
 
 ## AutoGen에서 MCP 서버 코드 호출 가이드
 
@@ -179,7 +176,6 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 자세한 예제는 `weather_sse.py`, `mcp_client_sse.py` 파일을 참고하세요.
 
 ---
-
 
 ## 공개된 MCP 서버 사용하기
 VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐만 아니라, 다른 개발자가 만든 MCP 서버(예: 원격 서버, 공개된 MCP 엔드포인트 등)도 쉽게 연결하여 사용할 수 있습니다.

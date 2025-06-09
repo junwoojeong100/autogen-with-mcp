@@ -1,0 +1,92 @@
+<policies>
+  <inbound>
+    <!-- Set backend service URL to AKS LoadBalancer -->
+    <set-backend-service base-url="http://20.249.113.197" />
+    
+    <!-- SSE 연결용 구독 키 검증 -->
+    <check-header name="Ocp-Apim-Subscription-Key"
+                  failed-check-httpcode="401"
+                  failed-check-error-message="SSE 연결을 위한 구독 키가 필요합니다."
+                  ignore-case="true" />
+    
+    <!-- Set appropriate headers for SSE streaming -->
+    <set-header name="Accept" exists-action="override">
+      <value>text/event-stream</value>
+    </set-header>
+    
+    <set-header name="Cache-Control" exists-action="override">
+      <value>no-cache</value>
+    </set-header>
+    
+    <!-- Note: Connection header cannot be modified in APIM -->
+    
+    <!-- SSE 연결 전용 CORS 설정 -->
+    <cors allow-credentials="false">
+      <allowed-origins>
+        <origin>*</origin>
+      </allowed-origins>
+      <allowed-methods>
+        <method>GET</method>
+        <method>OPTIONS</method>
+      </allowed-methods>
+      <allowed-headers>
+        <header>*</header>
+      </allowed-headers>
+    </cors>
+    
+    <!-- SSE 연결 수 제한 (더 관대하게 조정) -->
+    <rate-limit calls="20" renewal-period="60" />
+    
+    <!-- AKS cold start 지연을 위한 추가 헤더 -->
+    <set-header name="X-AKS-Warmup" exists-action="override">
+      <value>true</value>
+    </set-header>
+    
+    <base />
+  </inbound>
+
+  <backend>
+    <!-- SSE 스트리밍을 위한 매우 긴 타임아웃 및 버퍼링 해제 -->
+    <!-- AKS cold start를 고려하여 더 긴 타임아웃 설정 -->
+    <forward-request timeout="1200" buffer-response="false" fail-on-error-status-code="false" />
+  </backend>
+
+  <outbound>
+    <!-- SSE 필수 헤더 설정 -->
+    <set-header name="Content-Type" exists-action="override">
+      <value>text/event-stream; charset=utf-8</value>
+    </set-header>
+    <set-header name="Cache-Control" exists-action="override">
+      <value>no-cache, no-transform</value>
+    </set-header>
+    
+    <!-- Note: Connection header is managed by APIM automatically -->
+    
+    <!-- Add custom headers for stream identification -->
+    <set-header name="X-SSE-Gateway" exists-action="override">
+      <value>APIM-MCP-Lab</value>
+    </set-header>
+    
+    <set-header name="X-Backend-Server" exists-action="override">
+      <value>AKS-LoadBalancer</value>
+    </set-header>
+    
+    <!-- 구독 키를 백엔드에 노출하지 않도록 삭제 -->
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    
+    <base />
+  </outbound>
+
+  <on-error>
+    <return-response>
+      <set-status code="200" reason="OK" />
+      <set-header name="Content-Type" exists-action="override">
+        <value>text/event-stream</value>
+      </set-header>
+      <set-header name="Cache-Control" exists-action="override">
+        <value>no-cache</value>
+      </set-header>
+      <set-body>data: {"error": "SSE 연결에 실패했습니다.", "timestamp": "@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")"}\n\n</set-body>
+    </return-response>
+  </on-error>
+</policies>

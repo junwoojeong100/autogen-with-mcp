@@ -1,0 +1,76 @@
+<policies>
+  <inbound>
+    <!-- API 전체에 적용되는 공통 보안 설정 -->
+    <check-header name="Ocp-Apim-Subscription-Key"
+                  failed-check-httpcode="401"
+                  failed-check-error-message="구독 키가 필요하거나 유효하지 않습니다."
+                  ignore-case="true" />
+    
+    <!-- API 전체 CORS 설정 -->
+    <cors allow-credentials="false">
+      <allowed-origins>
+        <origin>*</origin>
+      </allowed-origins>
+      <allowed-methods>
+        <method>GET</method>
+        <method>POST</method>
+        <method>OPTIONS</method>
+      </allowed-methods>
+      <allowed-headers>
+        <header>*</header>
+      </allowed-headers>
+      <expose-headers>
+        <header>Content-Type</header>
+        <header>Cache-Control</header>
+        <header>X-MCP-Tool</header>
+      </expose-headers>
+    </cors>
+    
+    <!-- API 전체 속도 제한 -->
+    <rate-limit calls="1000" renewal-period="60" />
+    
+    <base />
+  </inbound>
+
+  <backend>
+    <!-- 기본 백엔드 설정 -->
+    <forward-request timeout="60" fail-on-error-status-code="true" />
+  </backend>
+
+  <outbound>
+    <!-- 공통 보안 헤더 설정 -->
+    <set-header name="X-Powered-By" exists-action="override">
+      <value>Azure APIM - Weather MCP API</value>
+    </set-header>
+    <set-header name="X-Content-Type-Options" exists-action="override">
+      <value>nosniff</value>
+    </set-header>
+    <set-header name="X-Frame-Options" exists-action="override">
+      <value>DENY</value>
+    </set-header>
+    <set-header name="X-XSS-Protection" exists-action="override">
+      <value>1; mode=block</value>
+    </set-header>
+    
+    <!-- 구독 키를 백엔드 응답에서 제거 -->
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    
+    <base />
+  </outbound>
+
+  <on-error>
+    <!-- 공통 에러 처리 -->
+    <return-response>
+      <set-status code="500" reason="Internal Server Error" />
+      <set-header name="Content-Type" exists-action="override">
+        <value>application/json</value>
+      </set-header>
+      <set-body>{
+        "error": "서버에서 오류가 발생했습니다.",
+        "api": "Weather MCP API",
+        "timestamp": "@(DateTime.UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))",
+        "requestId": "@(context.RequestId)"
+      }</set-body>
+    </return-response>
+  </on-error>
+</policies>

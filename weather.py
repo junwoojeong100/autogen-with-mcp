@@ -26,13 +26,13 @@ async def make_nws_request(url: str) -> dict[str, Any] | None:
 def format_alert(feature: dict) -> str:
     """Format an alert feature into a readable string."""
     props = feature["properties"]
-    return f"""
-Event: {props.get('event', 'Unknown')}
-Area: {props.get('areaDesc', 'Unknown')}
-Severity: {props.get('severity', 'Unknown')}
-Description: {props.get('description', 'No description available')}
-Instructions: {props.get('instruction', 'No specific instructions provided')}
-"""
+    return (
+        f"Event: {props.get('event', 'Unknown')}\n"
+        f"Area: {props.get('areaDesc', 'Unknown')}\n"
+        f"Severity: {props.get('severity', 'Unknown')}\n"
+        f"Description: {props.get('description', 'No description available')}\n"
+        f"Instructions: {props.get('instruction', 'No specific instructions provided')}\n"
+    )
 
 @mcp.tool()
 async def get_alerts(state: str) -> str:
@@ -79,12 +79,12 @@ async def get_forecast(latitude: float, longitude: float) -> str:
     periods = forecast_data["properties"]["periods"]
     forecasts = []
     for period in periods[:5]:  # Only show next 5 periods
-        forecast = f"""
-{period['name']}:
-Temperature: {period['temperature']}°{period['temperatureUnit']}
-Wind: {period['windSpeed']} {period['windDirection']}
-Forecast: {period['detailedForecast']}
-"""
+        forecast = (
+            f"{period['name']}:\n"
+            f"Temperature: {period['temperature']}°{period['temperatureUnit']}\n"
+            f"Wind: {period['windSpeed']} {period['windDirection']}\n"
+            f"Forecast: {period['detailedForecast']}\n"
+        )
         forecasts.append(forecast)
 
     return "\n---\n".join(forecasts)

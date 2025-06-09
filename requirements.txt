@@ -3,4 +3,7 @@ autogen-ext[openai,azure,mcp]
 openai
 python-dotenv
 httpx
+aiohttp
 mcp[cli]
+uvicorn
+fastapi
