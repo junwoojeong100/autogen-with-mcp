@@ -62,42 +62,73 @@ async def get_forecast(latitude: float, longitude: float) -> str:
     forecast = [f"{p['name']}: {p['detailedForecast']}" for p in periods]
     return "\n".join(forecast)
 
-# MCP 서버 실행 (SSE 타입, /sse GET & /messages/ POST 지원)
+# MCP 서버 실행 (SSE 타입, /sse GET & /messages POST 지원)
 if __name__ == "__main__":
     import uvicorn
+    from starlette.applications import Starlette
+    from starlette.routing import Route, Mount
+    from starlette.responses import JSONResponse
+    import uuid
     
     # FastMCP SSE 앱 가져오기
     sse_app = mcp.sse_app()
     
-    # /messages Mount가 제대로 작동하지 않으므로 직접 처리
-    # FastMCP SSE 앱의 messages 핸들러를 찾아서 직접 라우트 추가
+    # 원본 messages mount 찾기
     messages_mount = None
     for route in sse_app.routes:
         if hasattr(route, 'path') and route.path == '/messages':
             messages_mount = route
             break
     
-    if messages_mount and hasattr(messages_mount, 'app'):
-        # /messages/ POST 라우트를 직접 추가 (기존 Mount는 그대로 두고)
-        from starlette.routing import Route
+    # 새로운 Starlette 앱 생성하여 라우팅 문제 해결
+    from starlette.middleware.cors import CORSMiddleware
+    
+    app = Starlette()
+    
+    # CORS 미들웨어 추가
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # SSE 엔드포인트를 직접 처리
+    for route in sse_app.routes:
+        if hasattr(route, 'path') and route.path == '/sse':
+            app.routes.append(route)
+            break
+    
+    # /messages/ 엔드포인트를 쿼리 파라미터로 처리하도록 새로 생성
+    async def handle_messages(request):
+        """Handle /messages/ POST requests with session_id query parameter"""
+        session_id = request.query_params.get('session_id')
+        if not session_id:
+            return JSONResponse({"error": "session_id required"}, status_code=400)
         
-        async def messages_handler(request):
-            """Handle /messages/ POST requests"""
-            print(f"[DEBUG] Messages handler: {request.method} {request.url}")
+        # 원본 messages mount의 앱에 요청 전달
+        if messages_mount and hasattr(messages_mount, 'app'):
+            # 새로운 scope 생성 (session_id를 path_info에 포함)
+            new_scope = dict(request.scope)
+            new_scope['path'] = f'/messages/{session_id}'
+            new_scope['path_info'] = f'/messages/{session_id}'
+            
             try:
-                # 원래 messages mount의 app에 요청 전달
-                return await messages_mount.app(request.scope, request.receive, request._send)
+                # 원본 messages 앱에 요청 전달
+                response = await messages_mount.app(new_scope, request.receive, request._send)
+                return response
             except Exception as e:
                 print(f"[ERROR] Messages handler error: {e}")
-                from starlette.responses import JSONResponse
                 return JSONResponse({"error": str(e)}, status_code=500)
-        
-        # /messages/ 라우트 추가 (trailing slash 포함)
-        new_route = Route("/messages/", messages_handler, methods=["POST"])
-        sse_app.routes.append(new_route)
-        print("[DEBUG] Added explicit /messages/ POST route")
-    else:
-        print("[WARNING] Could not find messages mount in SSE app")
+        else:
+            return JSONResponse({"error": "Messages handler not available"}, status_code=503)
+    
+    # /messages/ 라우트 추가
+    app.routes.append(Route("/messages/", handle_messages, methods=["POST"]))
+    
+    print("[DEBUG] Created new app with proper /messages/ routing")
+    sse_app = app
     
     print("Starting Weather MCP Server on 0.0.0.0:8000 (APIM Compatible)")
     print("Tools:", ", ".join([tool.__name__ for tool in [get_alerts, get_forecast]]))
@@ -118,11 +149,13 @@ if __name__ == "__main__":
                     if route.path == '/sse' and method == 'GET':
                         supported_endpoints.append("GET /sse (SSE streaming)")
                     elif route.path == '/messages' and method == 'POST':
-                        supported_endpoints.append("POST /messages (MCP protocol)")
+                        supported_endpoints.append("POST /messages/ (MCP protocol)")
+                    elif route.path == '/messages/' and method == 'POST':
+                        supported_endpoints.append("POST /messages/ (MCP protocol)")
             else:
                 # Mount나 다른 타입의 라우트 처리
                 if route.path == '/messages':
-                    supported_endpoints.append("POST /messages (MCP protocol)")
+                    supported_endpoints.append("POST /messages/ (MCP protocol)")
     
     print(f"\n=== Supported Endpoints ===")
     for endpoint in supported_endpoints:

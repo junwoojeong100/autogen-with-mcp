@@ -32,7 +32,7 @@
 ```
 [로컬 mcp_client_sse_apim.py] → [Azure APIM] → [AKS의 weather_sse_apim.py] → [NWS API]
                                     ↓                        ↓
-                              [SSE /sse (GET)]        [Messages /messages/ (POST)]
+                              [SSE /sse (GET)]        [Messages /messages/{session_id} (POST)]
                               [Authentication]        [Session Management]              
 ```
 
@@ -41,7 +41,7 @@
 - **APIM**: API 게이트웨이로 인증, 모니터링, 보안 기능 제공
 - **핵심 엔드포인트**:
   - `GET /sse`: SSE 연결 초기화 (MCP 프로토콜 시작)
-  - `POST /messages/{session_id}`: MCP 메시지 전송 (도구 호출 등)
+  - `POST /messages`: MCP 메시지 전송 (도구 호출 등)
 
 ### 📋 프로젝트 구조 확인
 
@@ -59,7 +59,7 @@ autogen-with-mcp/
 ├── mcp_client_sse_apim.py         # 🔥 주요: MCP 클라이언트 (APIM 연동, 재시도 로직)
 ├── mcp_client_sse.py              # 직접 연결용 클라이언트 (테스트용)
 ├── apim-policy-sse-connection.xml # APIM SSE 연결 정책 (GET /sse)
-├── apim-policy-mcp-post.xml       # APIM MCP POST 메시지 정책 (POST /messages/)
+├── apim-policy-mcp-messages.xml   # APIM MCP POST 메시지 정책 (POST /messages/{session_id})
 ├── apim-policy-api-level.xml      # APIM API 레벨 정책 (CORS, 공통 설정)
 └── README.md                      # 프로젝트 설명
 ```
@@ -112,7 +112,7 @@ EXPOSE 8000
 CMD ["python", "weather_sse_apim.py"]
 ```
 
-**참고**: 이 Dockerfile은 weather_sse_apim.py에서 APIM 호환성을 위한 추가 라우팅을 제공합니다. 서버는 `/sse` (SSE 스트리밍)과 `/messages/` (MCP 프로토콜) 경로를 모두 지원합니다.
+**참고**: 이 Dockerfile은 weather_sse_apim.py에서 FastMCP를 사용하여 SSE 및 Messages 엔드포인트를 제공합니다. 서버는 `/sse` (GET, SSE 스트리밍)과 `/messages/{session_id}` (POST, MCP 프로토콜) 경로를 모두 지원합니다.
 
 ### 이미지 빌드 및 푸시
 
@@ -363,7 +363,7 @@ az apim api operation policy create \
     --api-id weather-mcp-api \
     --operation-id mcp-messages \
     --policy-format xml \
-    --value @apim-policy-mcp-post.xml
+    --value @apim-policy-mcp-messages.xml
 ```
 
 **4.3. API 레벨 정책 적용 (CORS 등):**
@@ -467,7 +467,7 @@ Azure Portal에서 **APIM** → **APIs** → **Weather MCP API** → **All opera
 
 ## 5. 클라이언트 코드 수정
 
-### mcp_client_sse_apim.py (재시도 로직 포함)
+### mcp_client_sse_apim.py (현재 구현된 버전)
 ```python
 from autogen_ext.tools.mcp import SseMcpToolAdapter, SseServerParams
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
@@ -476,122 +476,144 @@ from autogen_agentchat.ui import Console
 import asyncio
 import os
 from dotenv import load_dotenv
-import time
 
+# Load environment variables
 load_dotenv()
 
-async def create_adapter_with_retry(server_params, tool_name, max_retries=3, delay=2):
-    """재시도 로직이 포함된 어댑터 생성 함수"""
-    for attempt in range(max_retries):
-        try:
-            print(f"[DEBUG] {tool_name} 어댑터 생성 시도 {attempt + 1}/{max_retries}...")
-            adapter = await SseMcpToolAdapter.from_server_params(server_params, tool_name)
-            print(f"[SUCCESS] {tool_name} 어댑터 생성 성공")
-            return adapter
-        except Exception as e:
-            print(f"[ERROR] {tool_name} 어댑터 생성 실패 (시도 {attempt + 1}): {e}")
-            if attempt < max_retries - 1:
-                print(f"[RETRY] {delay}초 후 재시도...")
-                await asyncio.sleep(delay)
-            else:
-                print(f"[FATAL] {tool_name} 어댑터 생성을 포기합니다.")
-                raise e
-
 async def main() -> None:
-    # APIM 엔드포인트 설정
-    apim_url = os.getenv("APIM_GATEWAY_URL", "https://apim-mcp-lab.azure-api.net/mcp/sse")
-    subscription_key = os.getenv("APIM_SUBSCRIPTION_KEY")
+    # Get APIM configuration from environment
+    apim_endpoint = os.getenv("APIM_ENDPOINT")
+    apim_subscription_key = os.getenv("APIM_SUBSCRIPTION_KEY")
     
-    print(f"[DEBUG] APIM URL: {apim_url}")
-    print(f"[DEBUG] Subscription Key: {'*' * 10 if subscription_key else 'NOT SET'}")
+    # Temporary: Test direct AKS connection
+    use_direct_aks = True  # Set to False to use APIM
     
-    # 필수 환경변수 검증
-    required_vars = {
-        "APIM_SUBSCRIPTION_KEY": subscription_key,
-        "AZURE_OPENAI_ENDPOINT": os.getenv("AZURE_OPENAI_ENDPOINT"),
-        "AZURE_OPENAI_API_KEY": os.getenv("AZURE_OPENAI_API_KEY"),
-        "AZURE_OPENAI_DEPLOYMENT_NAME": os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-        "AZURE_OPENAI_API_VERSION": os.getenv("AZURE_OPENAI_API_VERSION")
-    }
+    if use_direct_aks:
+        print("[DEBUG] Using direct AKS connection for testing...")
+        base_url = "http://20.249.113.197"  # Your actual AKS LoadBalancer IP
+        headers = {}
+    else:
+        if not apim_endpoint or not apim_subscription_key:
+            print("[ERROR] APIM_ENDPOINT and APIM_SUBSCRIPTION_KEY environment variables are required")
+            return
+        base_url = apim_endpoint
+        headers = {"Ocp-Apim-Subscription-Key": apim_subscription_key}
     
-    missing_vars = [var for var, value in required_vars.items() if not value]
-    if missing_vars:
-        print(f"[ERROR] 다음 환경변수들이 설정되지 않았습니다: {', '.join(missing_vars)}")
-        print("Please set these variables in your .env file")
-        return
+    print(f"[DEBUG] Base URL: {base_url}")
+    
+    # Setup server params
+    if use_direct_aks:
+        sse_url = f"{base_url}/sse"
+    else:
+        sse_url = f"{base_url}/mcp/sse"
+    
+    print(f"[DEBUG] SSE URL: {sse_url}")
     
     server_params = SseServerParams(
-        url=apim_url,
+        url=sse_url, 
         headers={
-            "Ocp-Apim-Subscription-Key": subscription_key,
-            "Content-Type": "application/json",
-            "User-Agent": "MCP-Client-APIM/1.0"
+            **headers,
+            "Accept": "text/event-stream",
+            "Cache-Control": "no-cache"
         }
     )
 
-    print("[LOG] APIM 보안 연결을 통해 MCP 서버에 접속 중...")
+    print("[LOG] Creating adapter1 (get_alerts) ...")
+    print("[DEBUG] This may take 30-60 seconds for APIM/AKS connection...")
     
+    # Test APIM connectivity first
+    print("[DEBUG] Testing endpoint connectivity...")
     try:
-        # 재시도 로직으로 MCP 도구 어댑터 생성
-        print("[DEBUG] get_alerts 어댑터 생성 중...")
-        adapter1 = await create_adapter_with_retry(server_params, "get_alerts")
-        
-        print("[DEBUG] get_forecast 어댑터 생성 중...")  
-        adapter2 = await create_adapter_with_retry(server_params, "get_forecast")
-        
-        print("[LOG] 모든 MCP 도구 어댑터 생성 완료")
-        
+        import httpx
+        async with httpx.AsyncClient() as client:
+            test_response = await asyncio.wait_for(
+                client.get(sse_url, headers=headers, timeout=10.0),
+                timeout=15.0
+            )
+            print(f"[DEBUG] Endpoint status: {test_response.status_code}")
     except Exception as e:
-        print(f"[ERROR] MCP 서버 연결 실패: {e}")
-        print("\n다음 사항을 확인해주세요:")
-        print("1. AKS에서 MCP 서버가 실행 중인지 확인: kubectl get pods -l app=weather-mcp")
-        print("2. 서비스가 LoadBalancer IP를 할당받았는지 확인: kubectl get svc weather-mcp-service")
-        print("3. APIM에서 API가 올바르게 설정되었는지 확인")
-        print("4. 구독 키가 유효한지 확인")
-        print("5. 백엔드 IP가 APIM에 올바르게 설정되었는지 확인")
-        return
+        print(f"[DEBUG] Connectivity test failed: {e}")
+    
+    # Retry logic for adapter creation
+    max_retries = 3
+    
+    # Create adapter1 (get_alerts)
+    for attempt in range(max_retries):
+        try:
+            print(f"[DEBUG] Adapter1 creation attempt {attempt + 1}/{max_retries}")
+            adapter1 = await asyncio.wait_for(
+                SseMcpToolAdapter.from_server_params(server_params, "get_alerts"),
+                timeout=60.0
+            )
+            print("[LOG] adapter1 created successfully")
+            break
+        except Exception as e:
+            print(f"[DEBUG] Attempt {attempt + 1} failed: {e}")
+            if attempt == max_retries - 1:
+                print(f"[ERROR] Failed to create adapter1 after {max_retries} attempts")
+                return
+            await asyncio.sleep(2)
 
-    # Azure OpenAI 클라이언트 설정
-    try:
-        model_client = AzureOpenAIChatCompletionClient(
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"), 
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        )
+    print("[LOG] Creating adapter2 (get_forecast) ...")
+    
+    # Create adapter2 (get_forecast)
+    for attempt in range(max_retries):
+        try:
+            print(f"[DEBUG] Adapter2 creation attempt {attempt + 1}/{max_retries}")
+            adapter2 = await asyncio.wait_for(
+                SseMcpToolAdapter.from_server_params(server_params, "get_forecast"),
+                timeout=60.0
+            )
+            print("[LOG] adapter2 created successfully")
+            break
+        except Exception as e:
+            print(f"[DEBUG] Attempt {attempt + 1} failed: {e}")
+            if attempt == max_retries - 1:
+                print(f"[ERROR] Failed to create adapter2 after {max_retries} attempts")
+                return
+            await asyncio.sleep(2)
 
-        # 어시스턴트 에이전트 생성
-        assistant = AssistantAgent(
-            name="weather_assistant",
-            model_client=model_client,
-            tools=[adapter1, adapter2],
-            system_message="You are a helpful weather assistant. You can provide weather alerts and forecasts for US locations. Use the tools available to get current weather information. Always be helpful and provide specific weather details when available."
-        )
+    # Prepare the model client (Azure OpenAI)
+    model_client = AzureOpenAIChatCompletionClient(
+        azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    )
 
-        print("[LOG] 어시스턴트 에이전트 생성 완료")
-        print("[LOG] 대화를 시작합니다. 'quit' 또는 'exit'를 입력하면 종료됩니다.")
-        print("\n💡 테스트 예시:")
-        print("- What are the current weather alerts for California?")
-        print("- Can you get the forecast for New York?")
-        print("- Show me weather alerts for Texas")
+    # Initialize the AssistantAgent with streaming
+    agent = AssistantAgent(
+        name="weather_sse_assistant",
+        model_client=model_client,
+        tools=[adapter1, adapter2],
+        reflect_on_tool_use=True,
+        model_client_stream=True,
+    )
 
-        # 대화 시작
-        await Console(assistant).start()
-        
-    except Exception as e:
-        print(f"[ERROR] Azure OpenAI 클라이언트 생성 실패: {e}")
-        print("Azure OpenAI 설정을 확인해주세요.")
+    # Interactive console mode
+    print("[LOG] 날씨 어시스턴트가 준비되었습니다!")
+    print("[LOG] 대화를 시작합니다. 'quit' 또는 'exit'를 입력하면 종료됩니다.")
+    print("\n💡 테스트 예시:")
+    print("- What are the current weather alerts for California?")
+    print("- Can you get the forecast for coordinates 37.7749, -122.4194?")
+    print("- Show me weather alerts for Texas")
+    
+    # Start interactive console
+    await Console(agent).start()
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-**🔥 주요 개선사항:**
-- **재시도 로직**: 어댑터 생성 실패 시 자동 재시도
-- **상세한 디버그 출력**: 연결 상태를 단계별로 확인
-- **환경변수 자동 감지**: APIM_GATEWAY_URL 환경변수 지원
-- **더 나은 에러 처리**: 구체적인 해결 방법 제시
+**🔥 현재 구현의 주요 특징:**
+- **직접 AKS 연결 모드**: `use_direct_aks = True`로 설정하여 APIM 우회 가능
+- **하드코딩된 IP**: 실제 AKS LoadBalancer IP (20.249.113.197) 사용  
+- **연결성 테스트**: httpx를 통한 사전 연결 확인
+- **재시도 로직**: 어댑터 생성 실패 시 최대 3회 재시도
+- **스트리밍 모드**: `model_client_stream=True`로 실시간 응답
+- **대화형 콘솔**: Console 모드로 대화 지속
+- **좌표 기반 예보**: latitude, longitude를 사용한 날씨 예보 조회
 
 ## 6. 환경 변수 설정
 
@@ -606,12 +628,25 @@ AZURE_OPENAI_API_KEY=your-azure-openai-api-key
 AZURE_OPENAI_API_VERSION=2024-12-01-preview
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini
 
-# APIM 설정 (필수)
-APIM_GATEWAY_URL=https://apim-mcp-lab.azure-api.net/mcp/sse
+# APIM 설정 (APIM 사용 시 필요)
+APIM_ENDPOINT=https://apim-mcp-lab.azure-api.net
 APIM_SUBSCRIPTION_KEY=your-apim-subscription-key
 
 # 백엔드 정보 (참고용)
 BACKEND_IP=your-aks-loadbalancer-ip
+```
+
+**💡 현재 클라이언트 동작 방식:**
+- **직접 AKS 연결**: `use_direct_aks = True` (기본값)
+  - 하드코딩된 IP: `http://20.249.113.197` 사용
+  - APIM 환경변수 불필요
+- **APIM 경유**: `use_direct_aks = False`로 변경 시
+  - `APIM_ENDPOINT`, `APIM_SUBSCRIPTION_KEY` 필요
+
+**🔧 클라이언트 코드에서 APIM 모드로 변경하려면:**
+```python
+# mcp_client_sse_apim.py 파일에서
+use_direct_aks = False  # True -> False로 변경
 ```
 
 **💡 환경변수 자동 설정 (azure-commands.sh 실행 시):**
@@ -631,7 +666,7 @@ AZURE_OPENAI_ENDPOINT=https://your-openai-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-azure-openai-api-key
 AZURE_OPENAI_API_VERSION=2024-12-01-preview
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini
-APIM_GATEWAY_URL=$APIM_GATEWAY_URL/mcp/sse
+APIM_ENDPOINT=$APIM_GATEWAY_URL
 APIM_SUBSCRIPTION_KEY=$APIM_SUBSCRIPTION_KEY
 BACKEND_IP=$BACKEND_IP
 EOF
@@ -647,9 +682,10 @@ python3 -c "
 from dotenv import load_dotenv
 import os
 load_dotenv()
-print('APIM Gateway URL:', os.getenv('APIM_GATEWAY_URL'))
+print('APIM Endpoint:', os.getenv('APIM_ENDPOINT'))
 print('APIM Subscription Key:', '*' * 10 if os.getenv('APIM_SUBSCRIPTION_KEY') else 'NOT SET')
 print('Backend IP:', os.getenv('BACKEND_IP'))
+print('Direct AKS mode: Check use_direct_aks variable in mcp_client_sse_apim.py')
 "
 ```
 
@@ -724,14 +760,46 @@ curl -X GET "$APIM_URL/mcp/sse" \
 # 필요한 패키지 설치 (최초 1회만 실행)
 pip install -r requirements.txt
 
-# Azure OpenAI 환경변수를 .env에 추가 (수동)
+# Azure OpenAI 환경변수를 .env에 추가 (수동 - 필수)
 # AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY 등
 
-# 클라이언트 실행
+# 클라이언트 실행 (현재는 직접 AKS 연결 모드)
 python3 mcp_client_sse_apim.py
 ```
 
-### 5단계: 실제 테스트 예시
+**📋 현재 클라이언트 동작 방식:**
+- **기본 모드**: 직접 AKS 연결 (`use_direct_aks = True`)
+- **하드코딩 IP**: `http://20.249.113.197` (실제 LoadBalancer IP)
+- **APIM 모드**: 코드에서 `use_direct_aks = False`로 변경 시 APIM 경유
+
+### 5단계: 클라이언트 실행 로그 예시
+
+**성공적인 직접 AKS 연결:**
+```
+[DEBUG] Using direct AKS connection for testing...
+[DEBUG] Base URL: http://20.249.113.197
+[DEBUG] SSE URL: http://20.249.113.197/sse
+[LOG] Creating adapter1 (get_alerts) ...
+[DEBUG] This may take 30-60 seconds for APIM/AKS connection...
+[DEBUG] Testing endpoint connectivity...
+[DEBUG] Endpoint status: 200
+[DEBUG] Adapter1 creation attempt 1/3
+[LOG] adapter1 created successfully
+[LOG] Creating adapter2 (get_forecast) ...
+[DEBUG] Adapter2 creation attempt 1/3
+[LOG] adapter2 created successfully
+[LOG] 날씨 어시스턴트가 준비되었습니다!
+[LOG] 대화를 시작합니다. 'quit' 또는 'exit'를 입력하면 종료됩니다.
+
+💡 테스트 예시:
+- What are the current weather alerts for California?
+- Can you get the forecast for coordinates 37.7749, -122.4194?
+- Show me weather alerts for Texas
+
+User: What are the weather alerts for California?
+```
+
+### 6단계: 실제 테스트 예시
 클라이언트 실행 후 다음과 같은 질문들을 시도해보세요:
 
 **테스트 시나리오:**
@@ -741,55 +809,39 @@ python3 mcp_client_sse_apim.py
    "Show me any severe weather warnings for Texas"
    ```
 
-2. **일기예보 조회:**
+2. **일기예보 조회 (좌표 기반):**
    ```
-   "Can you get the forecast for New York?"
-   "What's the weather going to be like in Seattle this week?"
+   "Can you get the forecast for coordinates 37.7749, -122.4194?"
+   "What's the weather forecast for latitude 40.7589, longitude -73.9851?"
    ```
 
-3. **에러 처리 테스트:**
+3. **한국어 테스트:**
    ```
-   "Get alerts for InvalidState" (잘못된 주 이름)
-   "What's the weather in 12345?" (잘못된 입력)
+   "캘리포니아의 현재 기상 알림을 알려줘"
+   "37.7749, -122.4194 좌표의 일기예보는?"
    ```
 
 ### 📊 성공 시 예상 결과
 
-**클라이언트 로그:**
+**어시스턴트 응답 예시:**
 ```
-[DEBUG] APIM URL: https://apim-mcp-lab.azure-api.net/mcp/sse
-[DEBUG] Subscription Key: **********
-[LOG] APIM 보안 연결을 통해 MCP 서버에 접속 중...
-[DEBUG] get_alerts 어댑터 생성 시도 1/3...
-[SUCCESS] get_alerts 어댑터 생성 성공
-[DEBUG] get_forecast 어댑터 생성 시도 1/3...
-[SUCCESS] get_forecast 어댑터 생성 성공
-[LOG] 모든 MCP 도구 어댑터 생성 완료
-[LOG] 어시스턴트 에이전트 생성 완료
-[LOG] 대화를 시작합니다...
-```
+Assistant: I'll check the current weather alerts for California.
 
-**예상 응답 예시:**
-```
-사용자: "What are the current weather alerts for California?"
-
-어시스턴트: "I'll check the current weather alerts for California.
-
-[get_alerts 도구 호출]
+[도구 호출: get_alerts("California")]
 
 Based on the latest data from the National Weather Service, here are the current weather alerts for California:
 
-🌀 High Wind Warning - Los Angeles County
-📅 Valid until: 2025-06-09 18:00 PST
-🎯 Affected areas: Coastal areas and mountain regions
+�️ High Wind Warning - Los Angeles County
+📅 Valid until: 2025-06-10 18:00 PST
+🎯 Affected areas: Coastal areas and mountain regions  
 ⚠️ Details: Southwest winds 25-35 mph with gusts up to 60 mph expected...
 
 🔥 Red Flag Warning - Northern California
-📅 Valid until: 2025-06-09 20:00 PST  
+📅 Valid until: 2025-06-10 20:00 PST
 🎯 Affected areas: North Bay hills and mountains
 ⚠️ Details: Critical fire weather conditions due to strong winds and low humidity...
 
-Please stay safe and follow local emergency guidelines."
+Please stay safe and follow local emergency guidelines.
 ```
 - "Can you get the weather forecast for New York City? (latitude: 40.7128, longitude: -74.0060)"
 - "Are there any severe weather warnings for Texas?"
@@ -1058,7 +1110,7 @@ az group delete --name rg-mcp-lab --yes --no-wait
 #### ✅ APIM 설정 (10-15분)  
 - [ ] FastMCP 호환 API 생성 (2개 엔드포인트만)
 - [ ] SSE Connection 정책 적용 (apim-policy-sse-connection.xml)
-- [ ] MCP Messages 정책 적용 (apim-policy-mcp-post.xml)
+- [ ] MCP Messages 정책 적용 (apim-policy-mcp-messages.xml)
 - [ ] API 레벨 정책 적용 (apim-policy-api-level.xml)
 - [ ] 구독 키 생성 및 확인
 
@@ -1082,7 +1134,7 @@ az group delete --name rg-mcp-lab --yes --no-wait
 ```
 
 **핵심 구현사항:**
-1. **weather_sse_apim.py**: FastMCP 기반 MCP 서버 - `/sse` (GET), `/messages/` (POST) 지원
+1. **weather_sse_apim.py**: FastMCP 기반 MCP 서버 - `/sse` (GET), `/messages/{session_id}` (POST) 지원
 2. **mcp_client_sse_apim.py**: 재시도 로직과 디버그 출력이 포함된 APIM 호환 클라이언트  
 3. **3개의 전용 APIM 정책**: SSE 연결, MCP 메시지, API 레벨 정책 분리
 4. **자동화된 배포**: azure-commands.sh로 환경변수까지 자동 설정
@@ -1139,7 +1191,7 @@ kubectl get endpoints weather-mcp-service
 az apim backend show --resource-group rg-mcp-lab --service-name apim-mcp-lab --backend-id mcp-backend
 ```
 
-### Q2: "404 Not Found" on /messages/ POST 요청
+### Q2: "404 Not Found" on /messages/{session_id} POST 요청
 **증상**: SSE 연결은 성공하지만 POST /messages/{session_id} 요청이 404 오류
 **해결방법:**
 ```bash
@@ -1150,7 +1202,7 @@ kubectl logs -l app=weather-mcp | grep -E "(routes|messages|session)"
 # mcp_client_sse_apim.py에서 DEBUG 메시지 확인
 
 # 3. APIM 정책에서 URL 재작성 확인
-# apim-policy-mcp-post.xml에서 {session_id} 파라미터 전달 확인
+# apim-policy-mcp-messages.xml에서 {session_id} 파라미터 전달 확인
 
 # 4. 수동으로 엔드포인트 테스트
 BACKEND_IP=$(kubectl get svc weather-mcp-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')

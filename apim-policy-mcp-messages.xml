@@ -3,11 +3,35 @@
     <!-- Set backend service URL to AKS LoadBalancer -->
     <set-backend-service base-url="http://20.249.113.197" />
     
+    <!-- Extract session_id from URL path parameter -->
+    <set-variable name="session_id" value="@(context.Request.MatchedParameters["session_id"])" />
+    
+    <!-- Validate session_id parameter -->
+    <choose>
+      <when condition="@(string.IsNullOrEmpty((string)context.Variables["session_id"]))">
+        <return-response>
+          <set-status code="400" reason="Bad Request" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{
+            "error": "session_id 파라미터가 필요합니다.",
+            "timestamp": "@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")"
+          }</set-body>
+        </return-response>
+      </when>
+    </choose>
+    
     <!-- MCP Messages 엔드포인트용 구독 키 검증 -->
     <check-header name="Ocp-Apim-Subscription-Key"
                   failed-check-httpcode="401"
                   failed-check-error-message="MCP Messages 요청을 위한 구독 키가 필요합니다."
                   ignore-case="true" />
+    
+    <!-- Add session_id to request headers for backend -->
+    <set-header name="X-Session-ID" exists-action="override">
+      <value>@((string)context.Variables["session_id"])</value>
+    </set-header>
     
     <!-- Set appropriate headers for MCP Messages -->
     <set-header name="Content-Type" exists-action="override">
@@ -45,6 +69,7 @@
 
   <backend>
     <!-- MCP Messages를 위한 타임아웃 설정 -->
+    <!-- 백엔드 요청 시 session_id를 포함한 정확한 경로로 라우팅 -->
     <forward-request timeout="120" buffer-response="true" fail-on-error-status-code="false" />
   </backend>
 
@@ -52,6 +77,11 @@
     <!-- JSON 응답 헤더 설정 -->
     <set-header name="Content-Type" exists-action="override">
       <value>application/json; charset=utf-8</value>
+    </set-header>
+    
+    <!-- Add session info to response headers -->
+    <set-header name="X-Session-ID" exists-action="override">
+      <value>@((string)context.Variables["session_id"])</value>
     </set-header>
     
     <!-- Add custom headers for MCP identification -->
@@ -77,6 +107,7 @@
       </set-header>
       <set-body>{
         "error": "MCP Messages 요청에 실패했습니다.", 
+        "session_id": "@(context.Variables.ContainsKey("session_id") ? (string)context.Variables["session_id"] : "unknown")",
         "timestamp": "@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")"
       }</set-body>
     </return-response>

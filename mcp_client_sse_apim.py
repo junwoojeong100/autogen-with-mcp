@@ -4,12 +4,17 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.ui import Console
 import asyncio
 import os
+import uuid
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 async def main() -> None:
+    # Generate unique session ID for this client session
+    session_id = str(uuid.uuid4())
+    print(f"[DEBUG] Generated session ID: {session_id}")
+    
     # Get APIM configuration from environment
     apim_endpoint = os.getenv("APIM_ENDPOINT")
     apim_subscription_key = os.getenv("APIM_SUBSCRIPTION_KEY")
@@ -40,20 +45,29 @@ async def main() -> None:
     
     print(f"[DEBUG] SSE URL: {sse_url}")
     
+    # Create custom server params with session_id support
     server_params = SseServerParams(
         url=sse_url, 
         headers={
             **headers,
             "Accept": "text/event-stream",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
+            "X-Session-ID": session_id  # Add session ID to headers
         }
     )
 
     print("[LOG] Creating adapter1 (get_alerts) ...")
     print("[DEBUG] This may take 30-60 seconds for APIM/AKS connection...")
+    print(f"[DEBUG] Using session ID: {session_id}")
     
     # Test APIM connectivity first
     print("[DEBUG] Testing APIM endpoint connectivity...")
+    
+    # Test session_id support
+    connection_ok = await test_mcp_connection(sse_url, headers, session_id, base_url, use_direct_aks)
+    if not connection_ok:
+        print("[WARNING] Session ID test failed, but continuing with adapter creation...")
+    
     try:
         import httpx
         async with httpx.AsyncClient() as client:
@@ -132,6 +146,42 @@ async def main() -> None:
     await Console(
         agent.run_stream(task=prompt)
     )
+
+async def test_mcp_connection(sse_url, headers, session_id, base_url, use_direct_aks):
+    """Test MCP connection with session_id support"""
+    import httpx
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Test SSE connection
+            print(f"[DEBUG] Testing SSE connection: {sse_url}")
+            sse_response = await client.get(
+                sse_url,
+                headers={**headers, "Accept": "text/event-stream"},
+                timeout=10.0
+            )
+            print(f"[DEBUG] SSE status: {sse_response.status_code}")
+            
+            # Test messages endpoint with session_id as query parameter
+            if use_direct_aks:
+                messages_url = f"{base_url}/messages/"
+            else:
+                messages_url = f"{base_url}/mcp/messages/"
+            
+            print(f"[DEBUG] Testing messages endpoint: {messages_url}?session_id={session_id}")
+            messages_response = await client.post(
+                messages_url,
+                params={"session_id": session_id},  # Use query parameter
+                headers={**headers, "Content-Type": "application/json"},
+                json={"test": "connection"},
+                timeout=10.0
+            )
+            print(f"[DEBUG] Messages status: {messages_response.status_code}")
+            
+            return True
+    except Exception as e:
+        print(f"[DEBUG] Connection test failed: {e}")
+        return False
 
 if __name__ == "__main__":
     asyncio.run(main())

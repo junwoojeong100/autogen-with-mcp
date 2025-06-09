@@ -114,7 +114,7 @@ az apim api operation policy create \
     --api-id weather-mcp-api \
     --operation-id mcp-messages \
     --policy-format xml \
-    --value @apim-policy-mcp-post.xml
+    --value @apim-policy-mcp-messages.xml
 
 # 19. API 레벨 정책 적용 (CORS 및 공통 설정)
 az apim api policy create \
