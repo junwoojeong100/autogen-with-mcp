@@ -1,7 +1,5 @@
 # 🚧 APIM에서 Microsoft Entra ID(OAuth 2.0) 인증 적용 가이드 (작성중)
 
-> **필수 조건:** 본 가이드는 Azure API Management(APIM) 인스턴스가 최소 Developer(개발자) SKU 이상에서 동작합니다. 운영 환경에서는 Standard 이상을 권장합니다.PIM에서 Microsoft Entra ID(OAuth 2.0) 인증 적용 가이드 (작성중)
-
 > **필수 조건:** 본 가이드는 Azure API Management(APIM) 인스턴스가 최소 Developer(개발자) SKU 이상에서 동작합니다. 운영 환경에서는 Standard 이상을 권장합니다.
 
 이 문서는 Azure API Management(APIM)에서 Microsoft Entra ID(구 Azure AD)를 이용한 OAuth 2.0 인증을 적용하는 방법을 안내합니다.
