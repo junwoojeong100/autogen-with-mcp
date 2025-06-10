@@ -107,7 +107,7 @@ az apim api operation create \
   --url-template "/messages/{{session_id}}" \
   --response-status 200
 ```
-- 정책 파일: apim-policy-sse-connection.xml 등 참고
+
 
 ## 5. 환경 변수 및 클라이언트 실행
 - `.env` 파일에 Azure OpenAI, APIM, Backend 정보 입력
