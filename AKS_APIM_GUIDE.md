@@ -1,5 +1,29 @@
 # AKS + APIM 기반 MCP 서버 실습 가이드
 
+```
+[Client]
+   |
+   |  (API 호출, SSE 등)
+   v
+[Azure API Management (APIM)]
+   |
+   |  (API Gateway, 인증/정책)
+   v
+[AKS LoadBalancer Service]  <--- (외부 IP)
+   |
+   |  (내부 트래픽)
+   v
+[AKS Cluster]
+   |
+   |  (Pod)
+   v
+[FastMCP 서버 컨테이너]
+   |
+   |  (이미지)
+   v
+[Azure Container Registry (ACR)]
+```
+
 ## 1. 리소스 그룹 및 인프라 생성
 
 - **리소스 그룹 생성**

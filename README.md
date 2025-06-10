@@ -205,9 +205,8 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
 
 ## 🚀 Azure 클라우드 배포 가이드
 
-**FastMCP 서버를 AKS + APIM으로 배포하는 실습 가이드**
+본 가이드는 FastMCP 서버를 Azure Kubernetes Service(AKS)와 API Management(APIM)를 활용해 실제 클라우드 환경에 배포하는 과정을 안내합니다. Docker 이미지 빌드, AKS 배포, APIM을 통한 API 게이트웨이 및 인증 설정, 배포 상태 확인 등 실무에 필요한 핵심 절차를 단계별로 경험할 수 있습니다.
 
-### 📖 상세 가이드
-**[AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)** 
+자세한 명령어와 설명은 **[AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)** 파일을 참고하세요.
 
 **학습 내용**: Docker 컨테이너화, Kubernetes 배포, API Gateway 보안, FastMCP 프로토콜
