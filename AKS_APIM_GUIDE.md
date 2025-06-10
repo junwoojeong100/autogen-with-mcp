@@ -1,128 +1,180 @@
+# AKS + APIM 기반 FastMCP Weather SSE 서버 실습 가이드
 
-# AKS + APIM 기반 MCP 서버 실습 가이드
+## 1. 리소스 그룹 및 인프라 생성
 
-## 1. 사전 준비
-- Azure CLI, Docker, kubectl, Python 3.12+ 설치
-- Azure 구독 및 권한
-
-## 2. 리소스 생성
-### 생성되는 리소스
-- **리소스 그룹**: 실습에 필요한 모든 리소스의 컨테이너 역할
-- **AKS (Azure Kubernetes Service)**: 컨테이너 오케스트레이션 클러스터
-- **ACR (Azure Container Registry)**: 컨테이너 이미지 저장소
-- **APIM (API Management)**: API 게이트웨이 및 보안/정책 관리
-
-리소스 그룹 생성 (모든 리소스의 컨테이너 역할)
+- **리소스 그룹 생성**
 ```bash
 az group create --name rg-mcp-lab --location koreacentral
 ```
 
-AKS 클러스터 생성 (컨테이너 오케스트레이션)
+- **AKS 클러스터 생성**
 ```bash
-az aks create --resource-group rg-mcp-lab --name aks-mcp-cluster --node-count 1 --enable-addons monitoring --generate-ssh-keys
+az aks create --resource-group rg-mcp-lab --name aks-mcp-cluster --node-count 1 --node-vm-size Standard_DS4_v2 --enable-addons monitoring --generate-ssh-keys
 ```
 
-컨테이너 레지스트리 생성 (이미지 저장)
-```bash
-az acr create --resource-group rg-mcp-lab --name acrmcplab --sku Basic
-```
-
-API Management 인스턴스 생성 (API 게이트웨이)
-```bash
-az apim create --resource-group rg-mcp-lab --name apim-mcp-lab --publisher-name "MCP Lab" --publisher-email "admin@example.com" --sku-name Developer
-```
-
-kubectl 인증 정보 가져오기 (AKS 제어)
+- **kubectl 인증 정보 가져오기**
 ```bash
 az aks get-credentials --resource-group rg-mcp-lab --name aks-mcp-cluster
 ```
 
-AKS와 ACR 연결 (이미지 풀링 권한 부여)
+- **Azure Container Registry 생성**
+```bash
+az acr create --resource-group rg-mcp-lab --name acrmcplab --sku Basic
+```
+
+- **AKS와 ACR 연결**
 ```bash
 az aks update -n aks-mcp-cluster -g rg-mcp-lab --attach-acr acrmcplab
 ```
 
-## 3. 애플리케이션 배포
 
-컨테이너 이미지 빌드 (애플리케이션 패키징)
-- Dockerfile에서 참조하는 주요 파일:
-  - `requirements.txt`: Python 패키지 의존성 목록
-  - `weather_sse_apim.py`: FastMCP 기반 MCP 서버 메인 소스
+## 2. 애플리케이션 빌드 및 배포
+
+- **ACR(Azure Container Registry) 로그인**
+  - 로컬 Docker가 Azure Container Registry(acrmcplab)에 접근할 수 있도록 인증합니다.
+```bash
+az acr login --name acrmcplab
+```
+
+- **Docker 이미지 빌드 및 푸시**
+  - weather_sse_apim.py를 포함한 서버 이미지를 빌드하고, ACR에 업로드합니다.
 ```bash
 docker build -t acrmcplab.azurecr.io/weather-mcp:latest .
-```
-
-이미지 레지스트리에 푸시 (ACR로 업로드)
-```bash
 docker push acrmcplab.azurecr.io/weather-mcp:latest
 ```
+  - (참고) 멀티플랫폼 빌드가 필요한 경우 아래 명령을 사용할 수 있습니다.
+    ```bash
+    # docker buildx create --name multiplatform-builder --use
+    # docker buildx build --platform linux/amd64,linux/arm64 -t acrmcplab.azurecr.io/weather-mcp:latest --push .
+    ```
 
-Kubernetes에 배포 (애플리케이션 실행)
+- **Kubernetes에 배포**
 ```bash
 kubectl apply -f deployment.yaml
 ```
 
-## 4. APIM 연동
+## 3. APIM 리소스 및 엔드포인트 구성
 
-### APIM에서 생성되는 오브젝트 및 정책
-- **Backend**: 실제 MCP 서버(LoadBalancer IP)를 가리키는 백엔드 리소스
-- **API**: 외부에 노출되는 MCP Weather API 엔드포인트 (경로, 이름, 백엔드 연결 포함)
-- **Operation**: API 하위에 실제로 호출 가능한 엔드포인트(예: GET /sse, POST /messages/{session_id})를 등록. 각 Operation마다 메서드, 경로, 설명, 정책을 지정할 수 있음.
-- **정책(Policy)**: API Gateway에서 인증, CORS, 라우팅, 보안 등 다양한 동작을 제어하는 XML 기반 규칙. 예시: SSE 연결 허용, 메시지 경로 매핑, API Key 인증 등. (apim-policy-sse-connection.xml 등 참고)
-
-AKS 서비스의 LoadBalancer IP 조회 (APIM 백엔드 연결용)
+- **AKS 서비스의 LoadBalancer IP 확인**
 ```bash
 BACKEND_IP=$(kubectl get service weather-mcp-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-APIM에 Backend 등록 (실제 MCP 서버 연결)
+- **APIM 인스턴스 생성**
 ```bash
-az apim backend create --resource-group rg-mcp-lab --service-name apim-mcp-lab --backend-id mcp-backend --url "http://$BACKEND_IP" --protocol http
+az apim create --name apim-mcp-lab --resource-group rg-mcp-lab --publisher-name "MCP Lab" --publisher-email "admin@example.com" --sku-name Developer
 ```
 
-APIM에 API 등록 (외부 노출용 엔드포인트 생성)
+- **APIM Backend 등록**
 ```bash
-az apim api create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id mcp-api --path "/mcp" --display-name "MCP Weather API" --service-url "http://$BACKEND_IP"
+az apim backend create --resource-group rg-mcp-lab --service-name apim-mcp-lab --backend-id mcp-backend --url "http://$BACKEND_IP:8000" --protocol http
 ```
 
-#### Operation 등록 예시 (필수 엔드포인트)
-GET /sse 엔드포인트 등록 (SSE 연결용)
+- **APIM API 등록**
 ```bash
-az apim api operation create \
-  --resource-group rg-mcp-lab \
-  --service-name apim-mcp-lab \
-  --api-id mcp-api \
-  --operation-id get-sse \
-  --display-name "SSE Connect" \
-  --method GET \
-  --url-template "/sse" \
-  --response-status 200
+az apim api create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --path "/mcp" --display-name "Weather MCP Server API (FastMCP)" --service-url "http://$BACKEND_IP:8000"
 ```
 
-POST /messages/{session_id} 엔드포인트 등록 (메시지 전송용)
+- **GET /sse Operation 등록**
 ```bash
-az apim api operation create \
-  --resource-group rg-mcp-lab \
-  --service-name apim-mcp-lab \
-  --api-id mcp-api \
-  --operation-id post-messages \
-  --display-name "Send MCP Message" \
-  --method POST \
-  --url-template "/messages/{{session_id}}" \
-  --response-status 200
+az apim api operation create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --operation-id sse-connection --method GET --url-template "/sse" --display-name "SSE Connection (MCP Initialization)"
 ```
 
-
-## 5. 환경 변수 및 클라이언트 실행
-- `.env` 파일에 Azure OpenAI, APIM, Backend 정보 입력
+- **POST /messages/{session_id} Operation 등록**
 ```bash
-pip install -r requirements.txt
-python3 mcp_client_sse_apim.py
+az apim api operation create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --operation-id mcp-messages --method POST --url-template "/messages/{session_id}" --display-name "MCP Messages (Protocol Communication)"
 ```
 
-## 6. 리소스 정리
+- **Operation별 정책 적용**
+```bash
+az apim api operation policy create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --operation-id sse-connection --policy-format xml --value @apim-policy-sse-connection.xml
+az apim api operation policy create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --operation-id mcp-messages --policy-format xml --value @apim-policy-mcp-messages.xml
+```
+
+- **API 레벨 정책 적용**
+```bash
+az apim api policy create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id weather-mcp-api --policy-format xml --value @apim-policy-api-level.xml
+```
+
+## 4. 배포 결과 확인 및 Subscription Key 발급
+
+- **APIM Subscription Key 생성**
+  - API 호출에 사용할 Subscription Key를 생성합니다.
+```bash
+az apim subscription create \
+    --resource-group rg-mcp-lab \
+    --service-name apim-mcp-lab \
+    --subscription-id mcp-subscription \
+    --scope "/apis/weather-mcp-api" \
+    --display-name "MCP API Subscription"
+```
+
+- **Subscription Key 조회**
+  - 발급된 Subscription Key(Primary Key)를 확인합니다.
+```bash
+az apim subscription show \
+    --resource-group rg-mcp-lab \
+    --service-name apim-mcp-lab \
+    --subscription-id mcp-subscription \
+    --query "primaryKey" \
+    --output tsv
+```
+
+- **API 엔드포인트 목록 확인**
+  - APIM에 등록된 API의 엔드포인트(Operation) 목록을 확인합니다.
+```bash
+az apim api operation list \
+    --resource-group rg-mcp-lab \
+    --service-name apim-mcp-lab \
+    --api-id weather-mcp-api \
+    --query "[].{Name:displayName, Method:method, Template:urlTemplate}" \
+    --output table
+```
+
+- **APIM Gateway URL 확인**
+  - APIM Gateway의 엔드포인트 URL을 확인합니다.
+```bash
+APIM_GATEWAY_URL=$(az apim show \
+    --resource-group rg-mcp-lab \
+    --name apim-mcp-lab \
+    --query "gatewayUrl" \
+    --output tsv)
+echo "APIM Gateway URL: $APIM_GATEWAY_URL"
+```
+
+- **배포 상태 및 APIM 연결 테스트**
+  - AKS와 APIM의 배포 상태를 확인하고, 실제로 API 호출이 가능한지 테스트합니다.
+```bash
+echo "=== AKS 배포 상태 ==="
+kubectl get pods -l app=weather-mcp
+kubectl get services weather-mcp-service
+kubectl logs -l app=weather-mcp --tail=20
+
+echo "=== APIM 연결 테스트 ==="
+echo "SSE Connection Test:"
+curl -X GET "$APIM_GATEWAY_URL/mcp/sse" \
+  -H "Ocp-Apim-Subscription-Key: $(az apim subscription show --resource-group rg-mcp-lab --service-name apim-mcp-lab --subscription-id mcp-subscription --query primaryKey --output tsv)" \
+  -v
+```
+
+- **환경 변수 및 .env 파일 생성**
+  - 클라이언트에서 사용할 환경 변수와 .env 파일을 생성합니다.
+```bash
+echo "export APIM_GATEWAY_URL=\"$APIM_GATEWAY_URL\""
+echo "export APIM_SUBSCRIPTION_KEY=\"$(az apim subscription show --resource-group rg-mcp-lab --service-name apim-mcp-lab --subscription-id mcp-subscription --query primaryKey --output tsv)\""
+echo "export BACKEND_IP=\"$BACKEND_IP\""
+
+cat > .env << EOF
+APIM_GATEWAY_URL=$APIM_GATEWAY_URL
+APIM_SUBSCRIPTION_KEY=$(az apim subscription show --resource-group rg-mcp-lab --service-name apim-mcp-lab --subscription-id mcp-subscription --query primaryKey --output tsv)
+BACKEND_IP=$BACKEND_IP
+EOF
+echo ".env 파일이 생성되었습니다."
+```
+
+## 5. 리소스 정리
+
+- **실습 리소스 전체 삭제**
 ```bash
 az group delete --name rg-mcp-lab --yes --no-wait
 ```
-
----
