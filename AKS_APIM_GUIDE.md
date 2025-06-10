@@ -73,8 +73,7 @@ az aks update \
 - **ACR(Azure Container Registry) 로그인**
   - 로컬 Docker가 Azure Container Registry(acrmcplab)에 접근할 수 있도록 인증합니다.
 ```bash
-az acr login \
-  --name acrmcplab
+az acr login --name acrmcplab
 ```
 
 - **Docker 이미지 빌드 및 푸시**
