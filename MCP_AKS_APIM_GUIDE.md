@@ -99,11 +99,17 @@ kubectl apply -f deployment.yaml
 
 ## 3. APIM 리소스 및 엔드포인트 구성
 
-- **AKS 서비스의 LoadBalancer IP 확인**
+- **LoadBalancer IP & PORT 확인**
+  - AKS에서 외부로 노출된 서비스의 포트와 IP를 확인합니다.
 ```bash
-BACKEND_IP=$(kubectl get service weather-mcp-service \
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+kubectl get service weather-mcp-service
 ```
+  - 예시 출력:
+    ```
+    NAME                   TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)        AGE
+    weather-mcp-service    LoadBalancer   10.0.148.34   20.249.113.197   80:30125/TCP   2d3h
+    ```
+  - 서비스 포트(예: 80)는 아래와 같이 자동으로 변수에 저장할 수 있습니다.
 
 - **APIM 인스턴스 생성**
 ```bash
@@ -121,7 +127,7 @@ az apim backend create \
   --resource-group rg-mcp-lab \
   --service-name apim-mcp-lab \
   --backend-id mcp-backend \
-  --url "http://$BACKEND_IP:8000" \
+  --url "http://$BACKEND_IP:$BACKEND_PORT" \
   --protocol http
 ```
 
@@ -133,7 +139,7 @@ az apim api create \
   --api-id weather-mcp-api \
   --path "/mcp" \
   --display-name "Weather MCP Server API (FastMCP)" \
-  --service-url "http://$BACKEND_IP:8000"
+  --service-url "http://$BACKEND_IP:$BACKEND_PORT"
 ```
 
 - **GET /sse Operation 등록**
