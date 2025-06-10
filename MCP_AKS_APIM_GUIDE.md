@@ -111,6 +111,15 @@ kubectl get service weather-mcp-service
     ```
   - 서비스 포트(예: 80)는 아래와 같이 자동으로 변수에 저장할 수 있습니다.
 
+- **LoadBalancer IP & PORT 값을 환경변수로 저장**
+```bash
+BACKEND_IP=$(kubectl get service weather-mcp-service \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+BACKEND_PORT=$(kubectl get service weather-mcp-service \
+  -o jsonpath='{.spec.ports[0].port}')
+```
+
 - **APIM 인스턴스 생성**
 ```bash
 az apim create \
