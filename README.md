@@ -221,6 +221,6 @@ Azure 클라우드 환경에서 직접 MCP 서버를 운영하고 싶다면, AKS
    - APIM을 통해 외부에서 API 호출이 가능한지 테스트합니다.
    - 배포 상태, 엔드포인트, 인증키 등 운영에 필요한 정보를 확인합니다.
 
-> **자세한 단계별 명령어와 설명은 [MCP_AKS_APIM_GUIDE.md](./MCP_AKS_APIM_GUIDE.md)에서 확인하세요.**
+> **자세한 단계별 명령어와 설명은 [AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)에서 확인하세요.**
 
 - 실습을 통해 Docker, Kubernetes, Azure API Gateway, FastMCP 프로토콜의 실전 배포 과정을 익힐 수 있습니다.
