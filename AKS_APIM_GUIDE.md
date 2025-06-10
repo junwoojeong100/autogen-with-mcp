@@ -1,4 +1,4 @@
-# AKS + APIM 기반 FastMCP Weather SSE 서버 실습 가이드
+# AKS + APIM 기반 MCP 서버 실습 가이드
 
 ## 1. 리소스 그룹 및 인프라 생성
 
