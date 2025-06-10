@@ -9,7 +9,7 @@
    |
    |  (API Gateway, 인증/정책)
    v
-[AKS LoadBalancer Service]  <--- (외부 IP)
+[AKS LoadBalancer Service]
    |
    |  (내부 트래픽)
    v
