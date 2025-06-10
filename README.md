@@ -176,7 +176,7 @@ adapter2 = await SseMcpToolAdapter.from_server_params(server_params, "get_foreca
 
 ---
 
-## 공개된 MCP 서버 사용하기
+## 공개된 MCP 서버 사용 가이드
 VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐만 아니라, 다른 개발자가 만든 MCP 서버(예: 원격 서버, 공개된 MCP 엔드포인트 등)도 쉽게 연결하여 사용할 수 있습니다.
 
 
@@ -192,8 +192,7 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
    - 연결된 MCP 서버의 도구 목록을 불러와서, 자신의 프로젝트나 VS Code 내에서 바로 활용할 수 있습니다.
 
 
-
-### VS Code에서 Azure MCP Server 사용 가이드 (Microsoft Learn 기반)
+### VS Code에서 Azure MCP Server 사용 가이드
 
 - Microsoft 공식 가이드: [Azure MCP Server 개요](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/)
 - 빠른 시작: [Azure MCP Server Get Started](https://learn.microsoft.com/en-us/azure/developer/azure-mcp-server/get-started?tabs=one-click%2Cazure-cli&pivots=mcp-github-copilot)
@@ -203,10 +202,25 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
 
 ---
 
-## 🚀 Azure 클라우드 배포 가이드
+## 🚀 AKS + APIM 기반 MCP 서버 실습 가이드
 
-본 가이드는 FastMCP 서버를 Azure Kubernetes Service(AKS)와 API Management(APIM)를 활용해 실제 클라우드 환경에 배포하는 과정을 안내합니다. Docker 이미지 빌드, AKS 배포, APIM을 통한 API 게이트웨이 및 인증 설정, 배포 상태 확인 등 실무에 필요한 핵심 절차를 단계별로 경험할 수 있습니다.
+Azure 클라우드 환경에서 직접 MCP 서버를 운영하고 싶다면, AKS와 APIM을 활용한 배포가 대표적인 방법입니다. 이 실습 가이드는 실제로 컨테이너 이미지를 빌드하고, Azure에 배포하여, API Gateway를 통한 인증·보안까지 경험할 수 있도록 구성되어 있습니다.
 
-자세한 명령어와 설명은 **[AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)** 파일을 참고하세요.
+1. **Docker 이미지 빌드 및 업로드**
+   - FastMCP 서버 코드를 Docker 이미지로 빌드합니다.
+   - Azure Container Registry(ACR)에 이미지를 업로드합니다.
 
-**학습 내용**: Docker 컨테이너화, Kubernetes 배포, API Gateway 보안, FastMCP 프로토콜
+2. **AKS 클러스터에 배포**
+   - AKS에 컨테이너 이미지를 배포하고, LoadBalancer로 외부에 노출합니다.
+
+3. **APIM(API Management) 구성**
+   - APIM 인스턴스를 생성하고, AKS 서비스와 연동합니다.
+   - API 게이트웨이, 인증(Subscription Key), 정책 등을 설정합니다.
+
+4. **엔드포인트 및 배포 상태 확인**
+   - APIM을 통해 외부에서 API 호출이 가능한지 테스트합니다.
+   - 배포 상태, 엔드포인트, 인증키 등 운영에 필요한 정보를 확인합니다.
+
+> **자세한 단계별 명령어와 설명은 [AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)에서 확인하세요.**
+
+- 실습을 통해 Docker, Kubernetes, Azure API Gateway, FastMCP 프로토콜의 실전 배포 과정을 익힐 수 있습니다.
