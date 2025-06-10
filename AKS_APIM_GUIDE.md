@@ -1,5 +1,5 @@
 
-# AKS + APIM 기반 MCP 서버 실습 요약 가이드
+# AKS + APIM 기반 MCP 서버 실습 가이드
 
 ## 1. 사전 준비
 - Azure CLI, Docker, kubectl, Python 3.12+ 설치
@@ -29,15 +29,42 @@ kubectl apply -f deployment.yaml
 ```
 
 ## 4. APIM 연동
+
 ### APIM에서 생성되는 오브젝트 및 정책
 - **Backend**: 실제 MCP 서버(LoadBalancer IP)를 가리키는 백엔드 리소스
 - **API**: 외부에 노출되는 MCP Weather API 엔드포인트 (경로, 이름, 백엔드 연결 포함)
+- **Operation**: API 하위에 실제로 호출 가능한 엔드포인트(예: GET /sse, POST /messages/{session_id})를 등록. 각 Operation마다 메서드, 경로, 설명, 정책을 지정할 수 있음.
 - **정책(Policy)**: API Gateway에서 인증, CORS, 라우팅, 보안 등 다양한 동작을 제어하는 XML 기반 규칙. 예시: SSE 연결 허용, 메시지 경로 매핑, API Key 인증 등. (apim-policy-sse-connection.xml 등 참고)
 
 ```bash
 BACKEND_IP=$(kubectl get service weather-mcp-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 az apim backend create --resource-group rg-mcp-lab --service-name apim-mcp-lab --backend-id mcp-backend --url "http://$BACKEND_IP" --protocol http
 az apim api create --resource-group rg-mcp-lab --service-name apim-mcp-lab --api-id mcp-api --path "/mcp" --display-name "MCP Weather API" --service-url "http://$BACKEND_IP"
+```
+
+#### Operation 등록 예시 (필수 엔드포인트)
+```bash
+# GET /sse 엔드포인트 등록
+az apim api operation create \
+  --resource-group rg-mcp-lab \
+  --service-name apim-mcp-lab \
+  --api-id mcp-api \
+  --operation-id get-sse \
+  --display-name "SSE Connect" \
+  --method GET \
+  --url-template "/sse" \
+  --response-status 200
+
+# POST /messages/{session_id} 엔드포인트 등록
+az apim api operation create \
+  --resource-group rg-mcp-lab \
+  --service-name apim-mcp-lab \
+  --api-id mcp-api \
+  --operation-id post-messages \
+  --display-name "Send MCP Message" \
+  --method POST \
+  --url-template "/messages/{{session_id}}" \
+  --response-status 200
 ```
 - 정책 파일: apim-policy-sse-connection.xml 등 참고
 
