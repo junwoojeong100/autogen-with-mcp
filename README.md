@@ -1,7 +1,36 @@
+
 # autogen-with-mcp
 
-## Python 3.12 가상환경 생성 및 패키지 설치 가이드
+## 실습 구성
 
+이 저장소는 FastMCP 서버와 다양한 클라이언트, 그리고 Azure AKS/APIM 환경에서의 배포 및 연동 실습을 위한 예제 코드와 가이드를 포함합니다.
+
+### 실습 주요 흐름
+
+1. **로컬 FastMCP 서버 실행**: Python 환경에서 MCP 서버와 클라이언트(`weather.py`, `mcp_client.py` 등)를 직접 실행해보고, MCP 프로토콜과 도구 등록 방식을 익힙니다.
+2. **SSE 기반 서버/클라이언트 실습**: HTTP SSE(Server-Sent Events) 방식의 서버(`weather_sse.py`)와 클라이언트(`mcp_client_sse.py`)를 통해 네트워크 환경에서의 MCP 통신을 실습합니다.
+3. **APIM/AKS 배포 및 연동**: Azure Kubernetes Service(AKS)와 API Management(APIM)를 활용해 MCP 서버를 클라우드에 배포하고, APIM을 통한 인증/정책/라우팅을 실습합니다.
+4. **실습 가이드 문서 활용**: `AKS_APIM_GUIDE.md`, `APIM_OAUTH_GUIDE.md` 등 문서를 참고해 단계별 실습을 진행할 수 있습니다.
+
+각 단계별로 예제 코드와 정책 파일, 배포 매니페스트가 제공되며, 실습 목적에 따라 필요한 파일만 선택적으로 활용할 수 있습니다.
+
+## 주요 파일 설명
+
+- `weather.py` : FastMCP 서버의 기본 예제 구현 파일입니다.
+- `weather_sse.py` : SSE(Server-Sent Events) 기반 MCP 서버 예제입니다.
+- `weather_sse_apim.py` : APIM 연동용 SSE MCP 서버 예제입니다.
+- `mcp_client.py` : MCP 서버에 stdio 방식으로 연결하는 클라이언트 예제입니다.
+- `mcp_client_sse.py` : SSE 방식 MCP 서버에 연결하는 클라이언트 예제입니다.
+- `mcp_client_sse_apim.py` : APIM을 통해 SSE MCP 서버에 연결하는 클라이언트 예제입니다.
+- `deployment.yaml` : Kubernetes 배포를 위한 매니페스트 파일입니다.
+- `Dockerfile` : MCP 서버 컨테이너 이미지를 빌드하기 위한 Docker 설정 파일입니다.
+- `apim-policy-api-level.xml` : APIM API 레벨 정책 파일입니다.
+- `apim-policy-mcp-messages.xml` : APIM의 /messages 엔드포인트 정책 파일입니다.
+- `apim-policy-sse-connection.xml` : APIM의 /sse 엔드포인트 정책 파일입니다.
+- `AKS_APIM_GUIDE.md` : AKS + APIM 기반 실습 및 배포 가이드입니다.
+- `APIM_OAUTH_GUIDE.md` : APIM OAuth 인증 연동 가이드입니다.
+
+## Python 3.12 가상환경 생성 및 패키지 설치 가이드
 
 > ⚠️ **MCP 서버를 실행하려면 Python 3.11 이상이 필요합니다.**  
 > (출처: [Python SDK FastMCP Server 공식 문서](https://modelcontextprotocol.io/python-sdk/fastmcp/#server-transport-options))
