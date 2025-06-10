@@ -80,10 +80,9 @@ az acr login \
 - **Docker 이미지 빌드 및 푸시**
   - weather_sse_apim.py를 포함한 서버 이미지를 빌드하고, ACR에 업로드합니다.
 ```bash
-docker build \
-  -t acrmcplab.azurecr.io/weather-mcp:latest .
-docker push \
-  acrmcplab.azurecr.io/weather-mcp:latest
+docker build -t acrmcplab.azurecr.io/weather-mcp:latest .
+
+docker push acrmcplab.azurecr.io/weather-mcp:latest
 ```
   - (참고) 멀티플랫폼 빌드가 필요한 경우 아래 명령을 사용할 수 있습니다.
     ```bash
@@ -96,8 +95,7 @@ docker push \
 
 - **Kubernetes에 배포**
 ```bash
-kubectl apply \
-  -f deployment.yaml
+kubectl apply -f deployment.yaml
 ```
 
 ## 3. APIM 리소스 및 엔드포인트 구성
@@ -286,8 +284,5 @@ echo ".env 파일이 생성되었습니다."
 
 - **실습 리소스 전체 삭제**
 ```bash
-az group delete \
-  --name rg-mcp-lab \
-  --yes \
-  --no-wait
+az group delete --name rg-mcp-lab --yes --no-wait
 ```
