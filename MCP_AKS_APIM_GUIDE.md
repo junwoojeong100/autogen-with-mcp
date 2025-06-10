@@ -104,12 +104,11 @@ kubectl apply -f deployment.yaml
 ```bash
 kubectl get service weather-mcp-service
 ```
-  - 예시 출력:
-    ```
-    NAME                   TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)        AGE
-    weather-mcp-service    LoadBalancer   10.0.148.34   20.249.113.197   80:30125/TCP   2d3h
-    ```
-  - 서비스 포트(예: 80)는 아래와 같이 자동으로 변수에 저장할 수 있습니다.
+- 예시 출력:
+  ```
+  NAME                   TYPE           CLUSTER-IP    EXTERNAL-IP      PORT(S)        AGE
+  weather-mcp-service    LoadBalancer   10.0.148.34   20.249.113.197   80:30125/TCP   2d3h
+  ```
 
 - **LoadBalancer IP & PORT 값을 환경변수로 저장**
 ```bash
