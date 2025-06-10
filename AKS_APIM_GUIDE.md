@@ -43,7 +43,11 @@ az aks update -n aks-mcp-cluster -g rg-mcp-lab --attach-acr acrmcplab
 ```
 
 ## 3. 애플리케이션 배포
+
 컨테이너 이미지 빌드 (애플리케이션 패키징)
+- Dockerfile에서 참조하는 주요 파일:
+  - `requirements.txt`: Python 패키지 의존성 목록
+  - `weather_sse_apim.py`: FastMCP 기반 MCP 서버 메인 소스
 ```bash
 docker build -t acrmcplab.azurecr.io/weather-mcp:latest .
 ```
