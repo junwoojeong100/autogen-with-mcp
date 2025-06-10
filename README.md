@@ -208,20 +208,6 @@ VS Code와 같은 MCP Host 환경에서는 자신이 직접 만든 MCP 서버뿐
 **FastMCP 서버를 AKS + APIM으로 배포하는 실습 가이드**
 
 ### 📖 상세 가이드
-**[AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)** - 완전한 단계별 가이드
-
-### ⚡ 빠른 시작
-```bash
-# 전체 환경 자동 배포 (45분 소요)
-bash azure-commands.sh
-
-# 클라이언트 실행
-python3 mcp_client_sse_apim.py
-```
-
-### �️ 아키텍처
-```
-[mcp_client_sse_apim.py] → [Azure APIM] → [AKS weather_sse_apim.py] → [NWS API]
-```
+**[AKS_APIM_GUIDE.md](./AKS_APIM_GUIDE.md)** 
 
 **학습 내용**: Docker 컨테이너화, Kubernetes 배포, API Gateway 보안, FastMCP 프로토콜
