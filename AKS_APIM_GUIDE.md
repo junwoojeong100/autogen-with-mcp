@@ -295,9 +295,36 @@ EOF
 echo ".env 파일이 생성되었습니다."
 ```
 
+
 ## 5. 리소스 정리
 
 - **실습 리소스 전체 삭제**
 ```bash
 az group delete --name rg-mcp-lab --yes --no-wait
 ```
+
+---
+
+## 추가 고려사항 및 실전 팁
+
+1. **네트워크와 보안**
+   - 실습은 기본 오픈 환경을 기준으로 하지만, 실제 운영에서는 NSG(네트워크 보안 그룹)와 Ingress Controller(NGINX, AGIC 등) 설정을 꼭 검토하세요.
+   - APIM과 AKS를 프라이빗 네트워크로 연결하려면 VNET 통합 및 프라이빗 엔드포인트 구성을 추가로 진행해야 합니다.
+
+2. **APIM 정책 파일 이해**
+   - `apim-policy-api-level.xml`, `apim-policy-mcp-messages.xml`, `apim-policy-sse-connection.xml` 파일의 역할과 주요 정책 내용을 미리 파악하세요.
+   - 정책 파일에 주석을 달거나 별도 문서로 정리해두면 유지보수에 도움이 됩니다.
+
+3. **인증 및 보안 강화**
+   - 실습에서는 Subscription Key만 사용하지만, 실제 서비스에서는 OAuth2, JWT 등 추가 인증 방식을 적용하는 것이 안전합니다.
+   - APIM에 Custom Domain과 HTTPS 인증서를 적용하는 방법도 미리 확인해 두세요.
+
+4. **모니터링과 로깅**
+   - Azure Monitor, Log Analytics, Application Insights 등과 연동하여 AKS 및 컨테이너 상태를 모니터링하면 장애 대응이 쉬워집니다.
+
+5. **트러블슈팅(Troubleshooting)**
+   - 이미지 Pull 실패, ACR 권한 문제, APIM Backend 연결 오류 등 자주 발생하는 문제와 해결법(FAQ)을 별도 정리해두면 실습과 운영 모두에 도움이 됩니다.
+
+6. **기타 실전 팁**
+   - 리소스 네이밍 규칙을 정해두면 여러 환경을 관리할 때 혼동을 줄일 수 있습니다.
+   - 실습 후에는 반드시 리소스를 삭제하여 불필요한 비용이 발생하지 않도록 하세요.
