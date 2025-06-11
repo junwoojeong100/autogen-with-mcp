@@ -2,6 +2,7 @@
 
 > **필수 조건:** 본 가이드는 Azure API Management(APIM) 인스턴스가 최소 Developer(개발자) SKU 이상에서 동작합니다. 운영 환경에서는 Standard 이상을 권장합니다.
 
+
 ```
 [Client]
    |
@@ -25,6 +26,21 @@
    v
 [Azure Container Registry (ACR)]
 ```
+
+## 사용되는 주요 파일 설명
+
+| 파일명 | 주요 역할 |
+|---|---|
+| `Dockerfile` | FastMCP/Weather 서버용 컨테이너 이미지 빌드 스크립트 |
+| `deployment.yaml` | AKS에 서버 컨테이너를 배포하는 Kubernetes 매니페스트 |
+| `apim-policy-api-level.xml` | APIM API 전체에 적용되는 정책(XML) 정의 파일 |
+| `apim-policy-mcp-messages.xml` | `/messages/{session_id}` Operation에 적용되는 APIM 정책 파일 |
+| `apim-policy-sse-connection.xml` | `/sse` Operation에 적용되는 APIM 정책 파일 |
+| `mcp_client_sse_apim.py` | MCP 프로토콜 테스트/클라이언트용 Python 예제 코드 (실습에 사용) |
+| `weather_sse_apim.py` | Weather 예제 서버 코드 (SSE+APIM 연동, 실습에 사용) |
+| `requirements.txt` | 실습에 필요한 Python 패키지 목록 (서버/클라이언트 실행에 사용) |
+| `.env` | 실습 환경 변수 파일 (API Gateway 주소, Subscription Key 등) |
+
 
 ## 1. 리소스 그룹 및 인프라 생성
 
