@@ -1,5 +1,5 @@
 
-# 🚧 APIM에서 Microsoft Entra ID(OAuth 2.0) 인증 적용 가이드 (작성 중)
+# APIM에서 Microsoft Entra ID(OAuth 2.0) 인증 적용 가이드
 
 > **필수 조건:** 본 가이드는 Azure API Management(APIM) 인스턴스가 최소 Developer(개발자) SKU 이상에서 동작합니다. 운영 환경에서는 Standard 이상을 권장합니다.
 
@@ -85,3 +85,18 @@
 - [API 노출 및 스코프 등록 가이드](https://learn.microsoft.com/ko-kr/azure/active-directory/develop/quickstart-configure-app-expose-web-apis)
 - [accessTokenAcceptedVersion 매니페스트 설정](https://learn.microsoft.com/ko-kr/azure/active-directory/develop/reference-app-manifest)
 - [API Management 인증/인가 개념](https://learn.microsoft.com/ko-kr/azure/api-management/authentication-authorization-overview)
+
+---
+
+## 추가 고려사항 및 실전 팁
+
+1. **JWT 패싱**
+   - 백엔드 서비스에서도 토큰 검증이 필요하다면 `<set-header>` 정책을 이용해 Authorization 헤더를 그대로 전달합니다.
+2. **다중 스코프 관리**
+   - 여러 API를 보호할 경우 스코프별로 정책을 구분하고, 필요한 리소스에만 최소 권한을 부여하세요.
+3. **토큰 발급 테스트**
+   - [MSAL 라이브러리](https://learn.microsoft.com/azure/active-directory/develop/msal-overview)나 개발자 포털을 통해 토큰을 발급받고 Postman 등으로 호출해 보는 것을 권장합니다.
+4. **로깅과 모니터링 강화**
+   - APIM 진단 로그와 Application Insights를 활용하면 인증 실패 원인을 빠르게 파악할 수 있습니다.
+5. **운영 환경 최적화**
+   - 인증 서버와 APIM을 동일 지역에 배치하고 필요한 경우 프라이빗 네트워크 구성을 적용하여 지연을 최소화합니다.
